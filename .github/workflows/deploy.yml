@@ -42,8 +42,3 @@ jobs:
       - name: Build the Next.js app
         run: yarn build
         working-directory: nudrasil-app
-
-      - name: Start app without daemon
-        run: yarn pm2 start ecosystem.config.js --no-daemon
-        working-directory: nudrasil-app
-        shell: cmd
