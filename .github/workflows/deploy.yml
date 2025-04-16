@@ -1,4 +1,4 @@
-name: Deploy Next.js App (Yarn v4 / Berry)
+name: Deploy Next.js App
 
 on:
   push:
@@ -45,6 +45,9 @@ jobs:
 
       - name: Start or restart the app using PM2
         run: |
-          yarn dlx pm2 startOrReload ecosystem.config.js || \
-          yarn dlx pm2 start yarn --name nextjs-app -- start
+          yarn dlx pm2 startOrReload ecosystem.config.js
+          if ($LASTEXITCODE -ne 0) {
+            yarn dlx pm2 start yarn --name nextjs-app -- start
+          }
+        shell: pwsh
         working-directory: nudrasil-app
