@@ -45,9 +45,9 @@ jobs:
 
       - name: Start or restart the app using PM2
         run: |
-          yarn dlx pm2 startOrReload ecosystem.config.js
+          yarn pm2 startOrReload ecosystem.config.js
           if errorlevel 1 (
-            yarn dlx pm2 start yarn --name nextjs-app -- start
+            yarn pm2 start yarn --name nextjs-app -- start
           )
         shell: cmd
         working-directory: nudrasil-app
