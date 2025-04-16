@@ -1,4 +1,4 @@
-name: Deploy Next.js App (Yarn)
+name: Deploy Next.js App (Yarn v4 / Berry)
 
 on:
   push:
@@ -18,11 +18,18 @@ jobs:
         with:
           node-version: 22.14.0
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Cache Yarn dependencies
         uses: actions/cache@v3
         with:
           path: |
             .yarn/cache
+            .pnp.cjs
+            .yarn/unplugged
+            .yarn/build-state.yml
+            .yarn/install-state.gz
             node_modules
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
@@ -31,9 +38,10 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Build Next.js app
+      - name: Build the Next.js app
         run: yarn build
 
-      - name: Start or restart with PM2
+      - name: Start or restart the app using PM2
         run: |
-          yarn dlx pm2 startOrReload ecosystem.config.js || yarn dlx pm2 start yarn --name nextjs-app -- start
+          yarn dlx pm2 startOrReload ecosystem.config.js || \
+          yarn dlx pm2 start yarn --name nextjs-app -- start
