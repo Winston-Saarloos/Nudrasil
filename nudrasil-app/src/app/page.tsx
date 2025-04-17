@@ -12,6 +12,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { Button } from "@/components/ui/button"
 
 interface ChartPoint {
   time: string
@@ -98,6 +99,7 @@ export default function SensorPage() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <Button variant="outline">ShadCN is working 🎉</Button>
     </div>
   )
 }
