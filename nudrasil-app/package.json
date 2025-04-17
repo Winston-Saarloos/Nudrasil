@@ -29,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
     "pm2": "^6.0.5",
+    "prettier": "3.5.3",
     "tailwindcss": "^4.1.4",
     "typescript": "^5"
   },

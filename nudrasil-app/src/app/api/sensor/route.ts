@@ -1,34 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { SensorData } from '@/models/sensorData'
+import { NextRequest, NextResponse } from "next/server";
+import { SensorData } from "@/models/sensorData";
 
-const memoryStore: SensorData[] = []
+const memoryStore: SensorData[] = [];
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json()
+    const body = await req.json();
 
-    console.log(body)
-    if (typeof body.sensor !== 'string' || typeof body.value !== 'number') {
-      return NextResponse.json({ success: false, error: 'Invalid input' }, { status: 400 })
+    console.log(body);
+    if (typeof body.sensor !== "string" || typeof body.value !== "number") {
+      return NextResponse.json(
+        { success: false, error: "Invalid input" },
+        { status: 400 },
+      );
     }
 
     const entry: SensorData = {
       sensor: body.sensor,
       value: body.value,
-      time: Date.now()
-    }
+      time: Date.now(),
+    };
 
-    memoryStore.push(entry)
-    return NextResponse.json({ success: true, entry })
+    memoryStore.push(entry);
+    return NextResponse.json({ success: true, entry });
   } catch (err) {
-    return NextResponse.json({ success: false, error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json(
+      { success: false, error: "Invalid request" },
+      { status: 400 },
+    );
   }
 }
 
 export async function GET(): Promise<NextResponse> {
   // SAFETY: Always return valid JSON
-  console.log(memoryStore)
-  return NextResponse.json({ data: memoryStore })
+  console.log(memoryStore);
+  return NextResponse.json({ data: memoryStore });
 }
 
 // [
