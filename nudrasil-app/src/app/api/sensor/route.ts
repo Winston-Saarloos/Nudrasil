@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SensorData } from '@/models/sensorData'
 
-let memoryStore: SensorData[] = []
+const memoryStore: SensorData[] = []
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
