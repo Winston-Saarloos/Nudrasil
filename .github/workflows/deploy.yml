@@ -53,13 +53,18 @@ jobs:
 
       - name: Restart Next.js app with PM2 (graceful if possible)
         run: |
-          $exists = pm2 list | Select-String "next-app"
-          if ($exists) {
-            Write-Output "Reloading next-app..."
-            pm2 reload next-app
+          $pm2 = "C:\nvm4w\nodejs\pm2.cmd"
+          if (Test-Path $pm2) {
+            $exists = & $pm2 list | Select-String "next-app"
+            if ($exists) {
+              Write-Output "Reloading next-app..."
+              & $pm2 reload next-app
+            } else {
+              Write-Output "Starting next-app fresh..."
+              & $pm2 start yarn --name next-app -- start
+            }
+            & $pm2 save
           } else {
-            Write-Output "Starting next-app fresh..."
-            pm2 start yarn --name next-app -- start
+            Write-Error "pm2.cmd not found at $pm2"
           }
-          pm2 save
         working-directory: nudrasil-app
