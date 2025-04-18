@@ -25,20 +25,32 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            nudrasil-app/.yarn/cache
-            nudrasil-app/.pnp.cjs
-            nudrasil-app/.yarn/unplugged
-            nudrasil-app/.yarn/build-state.yml
-            nudrasil-app/.yarn/install-state.gz
             nudrasil-app/node_modules
           key: ${{ runner.os }}-yarn-${{ hashFiles('nudrasil-app/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Clean previous install
+        run: |
+          if exist node_modules rd /s /q node_modules
+        working-directory: nudrasil-app
+
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install --frozen-lockfile
+        working-directory: nudrasil-app
+
+      - name: Clean previous build output
+        run: |
+          if exist .next rd /s /q .next
         working-directory: nudrasil-app
 
       - name: Build the Next.js app
         run: yarn build
+        working-directory: nudrasil-app
+
+      - name: Restart Next.js app with PM2
+        run: |
+          pm2 delete next-app || echo "App not running"
+          pm2 start yarn --name next-app -- start
+          pm2 save
         working-directory: nudrasil-app
