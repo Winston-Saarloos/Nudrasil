@@ -30,7 +30,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Clean previous install
+      - name: Clean node_modules (optional safety)
         run: |
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
         working-directory: nudrasil-app
@@ -48,9 +48,15 @@ jobs:
         run: yarn build
         working-directory: nudrasil-app
 
-      - name: Restart Next.js app with PM2
+      - name: Restart Next.js app with PM2 (graceful if possible)
         run: |
-          pm2 delete next-app || echo "App not running"
-          pm2 start yarn --name next-app -- start
+          $exists = pm2 list | Select-String "next-app"
+          if ($exists) {
+            Write-Output "Reloading next-app..."
+            pm2 reload next-app
+          } else {
+            Write-Output "Starting next-app fresh..."
+            pm2 start yarn --name next-app -- start
+          }
           pm2 save
         working-directory: nudrasil-app
