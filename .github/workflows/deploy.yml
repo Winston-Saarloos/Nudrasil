@@ -32,7 +32,7 @@ jobs:
 
       - name: Clean previous install
         run: |
-          if exist node_modules rd /s /q node_modules
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
         working-directory: nudrasil-app
 
       - name: Install dependencies
@@ -41,7 +41,7 @@ jobs:
 
       - name: Clean previous build output
         run: |
-          if exist .next rd /s /q .next
+          if (Test-Path ".next") { Remove-Item -Recurse -Force ".next" }
         working-directory: nudrasil-app
 
       - name: Build the Next.js app
