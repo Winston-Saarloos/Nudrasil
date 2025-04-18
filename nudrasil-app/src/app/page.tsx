@@ -74,7 +74,7 @@ export default function SensorPage() {
     <div className="p-6 space-y-4 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
       <h1 className="text-2xl font-bold">Sensor Dashboard</h1>
       <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-        A large work in progress...
+        A large work in progress....
       </h2>
       <hr className="border-gray-300 dark:border-gray-700" />
       <p className="text-sm text-gray-600 dark:text-gray-400">
