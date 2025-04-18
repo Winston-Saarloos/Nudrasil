@@ -55,8 +55,8 @@ jobs:
         run: |
           $pm2 = "C:\nvm4w\nodejs\pm2.cmd"
           $nextPath = "node_modules\next\dist\bin\next"
-      
-          if (Test-Path $pm2 -and (Test-Path $nextPath)) {
+
+          if ((Test-Path $pm2) -and (Test-Path $nextPath)) {
             $exists = & $pm2 list | Select-String "next-app"
             if ($exists) {
               Write-Output "Reloading next-app..."
@@ -70,4 +70,3 @@ jobs:
             Write-Error "PM2 or next binary not found."
           }
         working-directory: nudrasil-app
-      
