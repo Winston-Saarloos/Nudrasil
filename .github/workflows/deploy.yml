@@ -61,7 +61,7 @@ jobs:
               & $pm2 reload next-app
             } else {
               Write-Output "Starting next-app fresh..."
-              & $pm2 start yarn --name next-app -- start
+              & $pm2 start "yarn.cmd" --name "next-app" -- run start
             }
             & $pm2 save
           } else {
