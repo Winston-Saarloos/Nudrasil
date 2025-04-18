@@ -36,7 +36,7 @@ jobs:
         working-directory: nudrasil-app
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
         working-directory: nudrasil-app
 
       - name: Clean previous build output
@@ -47,6 +47,9 @@ jobs:
       - name: Build the Next.js app
         run: yarn build
         working-directory: nudrasil-app
+
+      - name: Add PM2 to PATH
+        run: echo "$env:USERPROFILE\AppData\Roaming\npm" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
 
       - name: Restart Next.js app with PM2 (graceful if possible)
         run: |
