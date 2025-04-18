@@ -44,20 +44,22 @@ jobs:
           if (Test-Path ".next") { Remove-Item -Recurse -Force ".next" }
         working-directory: nudrasil-app
 
-      - name: Build the Next.js app
+      - name: Build the Next.js app (standalone)
         run: yarn build
         working-directory: nudrasil-app
 
-      - name: Copy build to live deployment folder
+      - name: Copy standalone build to live folder
         run: |
           $source = "$(Resolve-Path .)"
           $target = "C:\Deploy\nudrasil-live"
 
-          if (Test-Path "$target\.next") { Remove-Item -Recurse -Force "$target\.next" }
-          Copy-Item ".next" -Destination $target -Recurse -Force
-          Copy-Item "public" -Destination $target -Recurse -Force
-          Copy-Item "package.json" -Destination $target -Force
-          Copy-Item "yarn.lock" -Destination $target -Force
-          if (Test-Path ".yarn") { Copy-Item ".yarn" -Destination $target -Recurse -Force }
+          # Clean target directory
+          if (Test-Path "$target") { Remove-Item -Recurse -Force "$target\*" }
 
+          # Copy the standalone server build
+          Copy-Item ".next\standalone\*" -Destination $target -Recurse -Force
+
+          # Copy the required static assets
+          Copy-Item ".next\static" -Destination "$target\.next\static" -Recurse -Force
+          Copy-Item "public" -Destination "$target\public" -Recurse -Force
         working-directory: nudrasil-app
