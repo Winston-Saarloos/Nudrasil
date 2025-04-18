@@ -51,20 +51,23 @@ jobs:
       - name: Add PM2 to PATH
         run: echo "$env:USERPROFILE\AppData\Roaming\npm" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
 
-      - name: Restart Next.js app with PM2 (graceful if possible)
+      - name: Restart Next.js app with PM2 (run next directly)
         run: |
           $pm2 = "C:\nvm4w\nodejs\pm2.cmd"
-          if (Test-Path $pm2) {
+          $nextPath = "node_modules\next\dist\bin\next"
+      
+          if (Test-Path $pm2 -and (Test-Path $nextPath)) {
             $exists = & $pm2 list | Select-String "next-app"
             if ($exists) {
               Write-Output "Reloading next-app..."
               & $pm2 reload next-app
             } else {
-              Write-Output "Starting next-app fresh..."
-              & $pm2 start "yarn.cmd" --name "next-app" -- run start
+              Write-Output "Starting next-app fresh with direct next binary..."
+              & $pm2 start "node" --name "next-app" -- "$nextPath" start -p 3000
             }
             & $pm2 save
           } else {
-            Write-Error "pm2.cmd not found at $pm2"
+            Write-Error "PM2 or next binary not found."
           }
         working-directory: nudrasil-app
+      
