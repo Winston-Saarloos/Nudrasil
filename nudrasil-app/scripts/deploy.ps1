@@ -19,6 +19,7 @@ Write-Host ">> Copying build files..."
 Copy-Item "$build\*" -Destination $deployPath -Recurse -Force
 Copy-Item "$source\.next\static" -Destination "$deployPath\.next\static" -Recurse -Force
 Copy-Item "$source\public" -Destination "$deployPath\public" -Recurse -Force
+Copy-Item "$source\ecosystem.config.js" -Destination $deployPath -Force
 
 Write-Host ">> Starting PM2 process..."
 Set-Location $deployPath
