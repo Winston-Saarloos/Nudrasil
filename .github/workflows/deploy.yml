@@ -48,18 +48,7 @@ jobs:
         run: yarn build
         working-directory: nudrasil-app
 
-      - name: Copy standalone build to live folder
-        run: |
-          $source = "$(Resolve-Path .)"
-          $target = "C:\Deploy\nudrasil-live"
-
-          # Clean target directory
-          if (Test-Path "$target") { Remove-Item -Recurse -Force "$target\*" }
-
-          # Copy the standalone server build
-          Copy-Item ".next\standalone\*" -Destination $target -Recurse -Force
-
-          # Copy the required static assets
-          Copy-Item ".next\static" -Destination "$target\.next\static" -Recurse -Force
-          Copy-Item "public" -Destination "$target\public" -Recurse -Force
+      - name: Run deployment script
+        shell: pwsh
+        run: ./scripts/deploy.ps1
         working-directory: nudrasil-app
