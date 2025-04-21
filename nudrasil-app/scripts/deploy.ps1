@@ -3,7 +3,7 @@ $source = "$PSScriptRoot\.."
 $build = "$source\.next\standalone"
 
 Write-Host ">> Stop old app (if running)..."
-pm2 stop nudrasil-app
+pm2 stop nextjs-app
 
 Write-Host ">> Clean and copy new build..."
 if (Test-Path $deployPath) {
@@ -11,14 +11,16 @@ if (Test-Path $deployPath) {
 } else {
   New-Item -ItemType Directory -Path $deployPath | Out-Null
 }
+
+# Copy all necessary files
 Copy-Item "$build\*" -Destination $deployPath -Recurse -Force
+Copy-Item "$build\node_modules" -Destination "$deployPath\node_modules" -Recurse -Force
 Copy-Item "$source\.next\static" -Destination "$deployPath\.next\static" -Recurse -Force
 Copy-Item "$source\public" -Destination "$deployPath\public" -Recurse -Force
 Copy-Item "$source\ecosystem.config.js" -Destination $deployPath -Force
 
 Write-Host ">> Start new version with PM2..."
-Set-Location $deployPath
-pm2 start ecosystem.config.js --only nudrasil-app
+pm2 start ecosystem.config.js --only nextjs-app
 pm2 save
 
 Write-Host "✅ New version is now live!"
