@@ -13,8 +13,9 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"]
-    },
+      "@/*": ["./src/*"],
+      "@root/*": ["./*"]
+    },    
     "plugins": [
       {
         "name": "next"
