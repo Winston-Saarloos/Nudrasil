@@ -17,10 +17,10 @@ Copy-Item "$build\*" -Destination $deployPath -Recurse -Force
 Copy-Item "$build\node_modules" -Destination "$deployPath\node_modules" -Recurse -Force
 Copy-Item "$source\.next\static" -Destination "$deployPath\.next\static" -Recurse -Force
 Copy-Item "$source\public" -Destination "$deployPath\public" -Recurse -Force
-Copy-Item "$source\ecosystem.config.js" -Destination $deployPath -Force
+Copy-Item "$source\ecosystem.config.cjs" -Destination $deployPath -Force
 
 Write-Host ">> Start new version with PM2..."
-pm2 start ecosystem.config.js --only nextjs-app
+pm2 start ecosystem.config.cjs --only nextjs-app
 pm2 save
 
-Write-Host "✅ New version is now live!"
+Write-Host "New version is now live!"
