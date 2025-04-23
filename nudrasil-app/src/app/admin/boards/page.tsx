@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Board } from '@/models/board'
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState([]);
@@ -76,7 +77,7 @@ export default function BoardsPage() {
     }
   };
 
-  const startEdit = (board: any) => {
+  const startEdit = (board: Board) => {
     setEditId(board.id);
     setName(board.name);
     setLocation(board.location);
@@ -120,7 +121,7 @@ export default function BoardsPage() {
       <hr className="my-6" />
       <h3 className="font-bold">Boards:</h3>
       <ul className="space-y-2">
-        {boards.map((b: any) => (
+        {boards.map((b: Board) => (
           <li key={b.id} className="border p-2 rounded">
             <strong>{b.name}</strong> – {b.location} - [ {b.id} ]
             <button
