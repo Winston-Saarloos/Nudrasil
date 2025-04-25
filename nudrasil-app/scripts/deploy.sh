@@ -21,15 +21,15 @@ else
   mkdir -p "$DEPLOY_PATH"
 fi
 
-# Copy from standalone build
+# Copy standalone build
 cp "$BUILD/server.js" "$DEPLOY_PATH"
 cp -r "$BUILD/node_modules" "$DEPLOY_PATH/node_modules"
 
-# Copy static assets from original build
+# Copy .next/static correctly
 mkdir -p "$DEPLOY_PATH/.next"
-cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
+cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/
 
-# Copy public + ecosystem config
+# Copy public assets + config
 cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
 cp "$SOURCE/ecosystem.config.cjs" "$DEPLOY_PATH"
 
@@ -42,4 +42,4 @@ cd "$DEPLOY_PATH"
 pm2 start ecosystem.config.cjs --only nextjs-app
 pm2 save
 
-echo "New version is now live!"
+echo "✅ New version is now live!"
