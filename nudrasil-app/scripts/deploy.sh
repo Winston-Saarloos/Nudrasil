@@ -27,7 +27,7 @@ cp -r "$BUILD/node_modules" "$DEPLOY_PATH/node_modules"
 
 # Copy .next/static correctly
 mkdir -p "$DEPLOY_PATH/.next"
-cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/
+cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/"
 
 # Copy public assets + config
 cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
