@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Add PM2 to PATH
-export PATH="$PATH:/home/rocko/.nvm/versions/node/v23.11.0/bin/pm2"
+export PATH="$PATH:/home/rocko/.nvm/versions/node/v23.11.0/bin"
 
 set -e  # Exit on any error
 
