@@ -21,19 +21,13 @@ else
   mkdir -p "$DEPLOY_PATH"
 fi
 
-# Copy build output
-cp -r "$BUILD/"* "$DEPLOY_PATH"
-
-# Ensure deep paths exist before copying
-mkdir -p "$DEPLOY_PATH/node_modules"
+# Copy standalone build output explicitly
+cp "$BUILD/server.js" "$DEPLOY_PATH"
+cp -r "$BUILD/.next" "$DEPLOY_PATH/.next"
 cp -r "$BUILD/node_modules" "$DEPLOY_PATH/node_modules"
 
-mkdir -p "$DEPLOY_PATH/.next"
-cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
-
-mkdir -p "$DEPLOY_PATH/public"
+# opy remaining static/public files
 cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
-
 cp "$SOURCE/ecosystem.config.cjs" "$DEPLOY_PATH"
 
 # Copy .env
