@@ -1,37 +1,45 @@
 #!/bin/bash
-
-# Add PM2 to PATH
-export PATH="$PATH:/home/rocko/.nvm/versions/node/v23.11.0/bin"
-
 set -e
+
+export PATH="$PATH:/home/rocko/.nvm/versions/node/v23.11.0/bin"
 
 DEPLOY_PATH="/home/rocko/deploy/nudrasil-live"
 SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo ">> Stop old app if running..."
+echo ">> Stop old app (if running)…"
 pm2 stop nextjs-app || true
 
-echo ">> Clean and copy new build..."
+echo ">> Clean and copy new build…"
 rm -rf "$DEPLOY_PATH"
 mkdir -p "$DEPLOY_PATH"
 
-# Copy the standalone server.js and node_modules
-cp -r "$SOURCE/.next/standalone/"* "$DEPLOY_PATH/"
+# 1️⃣  Entire standalone bundle (includes server.js + node_modules + nested .next)
+cp -R "$SOURCE/.next/standalone/." "$DEPLOY_PATH/"
 
-# Copy public/ folder next to server.js
-cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
+# 2️⃣  public/ alongside server.js
+cp -R "$SOURCE/public" "$DEPLOY_PATH/public"
 
-# Copy static assets inside .next/static
+# 3️⃣  outer .next/static
 mkdir -p "$DEPLOY_PATH/.next"
-cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
+cp -R "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
 
-# Copy your ecosystem config and env file
-cp "$SOURCE/ecosystem.config.cjs" "$DEPLOY_PATH/"
-cp "/home/rocko/deploy/.env.production" "$DEPLOY_PATH/.env"
+# 4️⃣  required JSON manifests
+for f in BUILD_ID routes-manifest.json prerender-manifest.json required-server-files.json; do
+  cp "$SOURCE/.next/$f" "$DEPLOY_PATH/.next/$f"
+done
+if [ -f "$SOURCE/.next/server/pages-manifest.json" ]; then
+  mkdir -p "$DEPLOY_PATH/.next/server"
+  cp "$SOURCE/.next/server/pages-manifest.json" "$DEPLOY_PATH/.next/server/"
+fi
 
-echo ">> Start new version with PM2..."
+# 5️⃣  runtime config / PM2 file
+cp "$SOURCE/.env.production"        "$DEPLOY_PATH/.env"
+cp "$SOURCE/ecosystem.config.cjs"   "$DEPLOY_PATH/"
+
+echo ">> Start new version with PM2…"
 cd "$DEPLOY_PATH"
+pm2 delete nextjs-app       || true     # remove old definition if present
 pm2 start ecosystem.config.cjs --only nextjs-app
 pm2 save
 
-echo "✅ New version is now live!"
+echo "✅  New version is now live!"
