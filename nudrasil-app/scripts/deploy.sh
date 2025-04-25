@@ -33,8 +33,8 @@ if [ -f "$SOURCE/.next/server/pages-manifest.json" ]; then
 fi
 
 # 5️⃣  runtime config / PM2 file
-cp "$SOURCE/.env.production"        "$DEPLOY_PATH/.env"
-cp "$SOURCE/ecosystem.config.cjs"   "$DEPLOY_PATH/"
+cp "/home/rocko/deploy/.env.production" "$DEPLOY_PATH/.env"
+cp "$SOURCE/ecosystem.config.cjs"        "$DEPLOY_PATH/"
 
 echo ">> Start new version with PM2…"
 cd "$DEPLOY_PATH"
