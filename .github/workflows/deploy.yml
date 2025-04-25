@@ -32,7 +32,7 @@ jobs:
 
       - name: Clean node_modules (optional safety)
         run: |
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          if [ -d "node_modules" ]; then rm -rf node_modules; fi
         working-directory: nudrasil-app
 
       - name: Install dependencies
@@ -41,7 +41,7 @@ jobs:
 
       - name: Clean previous build output
         run: |
-          if (Test-Path ".next") { Remove-Item -Recurse -Force ".next" }
+          if [ -d ".next" ]; then rm -rf .next; fi
         working-directory: nudrasil-app
 
       - name: Build the Next.js app (standalone)
@@ -49,6 +49,6 @@ jobs:
         working-directory: nudrasil-app
 
       - name: Run deployment script
-        shell: powershell
-        run: ./scripts/deploy.ps1
+        run: ./scripts/deploy.sh
         working-directory: nudrasil-app
+        shell: bash
