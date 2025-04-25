@@ -21,12 +21,15 @@ else
   mkdir -p "$DEPLOY_PATH"
 fi
 
-# Copy standalone build output explicitly
+# Copy standalone server.js and node_modules
 cp "$BUILD/server.js" "$DEPLOY_PATH"
-cp -r "$BUILD/.next" "$DEPLOY_PATH/.next"
 cp -r "$BUILD/node_modules" "$DEPLOY_PATH/node_modules"
 
-# opy remaining static/public files
+# Copy .next/static from original build folder (not standalone)
+mkdir -p "$DEPLOY_PATH/.next"
+cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
+
+# Copy public assets and config
 cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
 cp "$SOURCE/ecosystem.config.cjs" "$DEPLOY_PATH"
 
