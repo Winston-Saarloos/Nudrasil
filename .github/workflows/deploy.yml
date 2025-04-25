@@ -48,6 +48,9 @@ jobs:
         run: yarn build
         working-directory: nudrasil-app
 
+      - name: Ensure PM2 is in PATH
+        run: echo "/usr/local/bin" >> $GITHUB_PATH
+
       - name: Make deploy script executable
         run: chmod +x ./scripts/deploy.sh
         working-directory: nudrasil-app
