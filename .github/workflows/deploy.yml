@@ -48,6 +48,10 @@ jobs:
         run: yarn build
         working-directory: nudrasil-app
 
+      - name: Make deploy script executable
+        run: chmod +x ./scripts/deploy.sh
+        working-directory: nudrasil-app
+
       - name: Run deployment script
         run: ./scripts/deploy.sh
         working-directory: nudrasil-app
