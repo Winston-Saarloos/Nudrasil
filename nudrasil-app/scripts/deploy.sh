@@ -12,7 +12,7 @@ ENV_SOURCE="/home/rocko/deploy/.env.production"
 ENV_DEST="$DEPLOY_PATH/.env"
 
 echo ">> Stop old app (if running)..."
-pm2 stop nextjs-app || true  # Don't fail if app isn't running
+pm2 stop nextjs-app || true
 
 echo ">> Clean and copy new build..."
 if [ -d "$DEPLOY_PATH" ]; then
@@ -21,19 +21,19 @@ else
   mkdir -p "$DEPLOY_PATH"
 fi
 
-# Copy standalone server.js and node_modules
+# Copy from standalone build
 cp "$BUILD/server.js" "$DEPLOY_PATH"
 cp -r "$BUILD/node_modules" "$DEPLOY_PATH/node_modules"
 
-# Copy .next/static from original build folder (not standalone)
+# Copy static assets from original build
 mkdir -p "$DEPLOY_PATH/.next"
 cp -r "$SOURCE/.next/static" "$DEPLOY_PATH/.next/static"
 
-# Copy public assets and config
+# Copy public + ecosystem config
 cp -r "$SOURCE/public" "$DEPLOY_PATH/public"
 cp "$SOURCE/ecosystem.config.cjs" "$DEPLOY_PATH"
 
-# Copy .env
+# Copy environment config
 echo ">> Copying environment config (.env.production -> .env)..."
 cp "$ENV_SOURCE" "$ENV_DEST"
 
