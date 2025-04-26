@@ -32,8 +32,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function GET(): Promise<NextResponse> {
-  // SAFETY: Always return valid JSON
   console.log(memoryStore);
+
   return NextResponse.json({ data: memoryStore });
 }
 

@@ -12,7 +12,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 
 interface ChartPoint {
   time: string;
@@ -34,7 +34,7 @@ export default function SensorPage() {
         const data = json.data as SensorData[];
 
         // Sort by time descending, take last 50 entries
-        const sorted = [...data].sort((a, b) => b.time - a.time);
+        const sorted = [...data].sort((a, b) => a.time - b.time);
         const last50 = sorted.slice(0, 50);
 
         const grouped: { [timestamp: number]: ChartPoint } = {};
@@ -56,7 +56,7 @@ export default function SensorPage() {
           .sort(
             (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
           )
-          .slice(-10);
+          .slice(-50);
 
         setChartData(finalChartData);
       } catch (error) {
@@ -66,9 +66,17 @@ export default function SensorPage() {
 
     fetchData();
     // Optional: enable live updates
-    // const interval = setInterval(fetchData, 30000)
-    // return () => clearInterval(interval)
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const latestTemp = [...chartData]
+    .reverse()
+    .find((data) => data.temp !== undefined);
+
+  const latestHumidity = [...chartData]
+    .reverse()
+    .find((data) => data.humidity !== undefined);
 
   return (
     <div className="p-6 space-y-4 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
@@ -80,7 +88,6 @@ export default function SensorPage() {
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Data is sent once a minute
       </p>
-
       <div style={{ width: "100%", height: 300 }}>
         <ResponsiveContainer>
           <LineChart data={chartData}>
@@ -125,28 +132,31 @@ export default function SensorPage() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      <Button variant="outline" onClick={() => location.reload()}>
+      {/* <Button variant="outline" onClick={() => location.reload()}>
         Refresh Page
-      </Button>
-
-      {chartData.length > 0 && (
+      </Button> */}
+      {chartData.length > 0 && latestTemp && latestHumidity && (
         <div className="mt-4 p-4 rounded-md bg-zinc-100 dark:bg-zinc-800">
           <h3 className="text-md font-semibold mb-2 text-zinc-700 dark:text-zinc-200">
             Latest Reading
           </h3>
           <div className="text-sm space-y-1 text-zinc-800 dark:text-zinc-100">
             <p>
-              <span className="font-medium">Time:</span>{" "}
-              {chartData[chartData.length - 1].time}
+              <span className="font-medium">Time (most recent):</span>
+              {new Date(
+                Math.max(
+                  new Date(latestTemp.time).getTime(),
+                  new Date(latestHumidity.time).getTime(),
+                ),
+              ).toLocaleString()}
             </p>
             <p>
-              <span className="font-medium">Temperature:</span>{" "}
-              {chartData[chartData.length - 1].temp?.toFixed(1)} °F
+              <span className="font-medium">Temperature:</span>
+              {latestTemp.temp?.toFixed(1)} °F
             </p>
             <p>
-              <span className="font-medium">Humidity:</span>{" "}
-              {chartData[chartData.length - 1].humidity?.toFixed(1)}%
+              <span className="font-medium">Humidity:</span>
+              {latestHumidity.humidity?.toFixed(1)}%
             </p>
           </div>
         </div>
