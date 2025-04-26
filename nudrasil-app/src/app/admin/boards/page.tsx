@@ -13,9 +13,23 @@ export default function BoardsPage() {
 
   const fetchBoards = async () => {
     const res = await fetch("/api/admin/boards");
-    const json = await res.json();
-    setBoards(json.data);
-  };
+  
+    let result = null;
+    try {
+      const text = await res.text();
+      if (text) {
+        result = JSON.parse(text);
+      }
+    } catch (e) {
+      console.error("Failed to parse boards response:", e);
+    }
+  
+    if (res.ok && result?.data) {
+      setBoards(result.data);
+    } else {
+      console.error("Failed to load boards", result);
+    }
+  };  
 
   const createBoard = async () => {
     const res = await fetch("/api/admin/boards", {
@@ -23,8 +37,17 @@ export default function BoardsPage() {
       body: JSON.stringify({ name, location, secret }),
       headers: { "Content-Type": "application/json" },
     });
-
-    const result = await res.json();
+  
+    let result = null;
+    try {
+      const text = await res.text();
+      if (text) {
+        result = JSON.parse(text);
+      }
+    } catch (e) {
+      console.error("Failed to parse response JSON:", e);
+    }
+  
     if (res.ok) {
       setStatus("✅ Board created");
       setName("");
@@ -32,9 +55,9 @@ export default function BoardsPage() {
       setSecret("");
       fetchBoards();
     } else {
-      setStatus(`❌ ${result.error}`);
+      setStatus(`❌ ${result?.error || "Unknown error"}`);
     }
-  };
+  };  
 
   const updateBoard = async () => {
     const res = await fetch("/api/admin/boards", {
@@ -43,8 +66,17 @@ export default function BoardsPage() {
       headers: { "Content-Type": "application/json" },
     });
 
-    const result = await res.json();
-    if (res.ok) {
+    let result = null;
+    try {
+      const text = await res.text();
+      if (text) {
+        result = JSON.parse(text);
+      }
+    } catch (e) {
+      console.error("Failed to parse response JSON:", e);
+    }
+
+        if (res.ok) {
       setStatus("✅ Board updated");
       setName("");
       setLocation("");
@@ -68,8 +100,16 @@ export default function BoardsPage() {
       headers: { "Content-Type": "application/json" },
     });
 
-    const result = await res.json();
-    if (res.ok) {
+    let result = null;
+    try {
+      const text = await res.text();
+      if (text) {
+        result = JSON.parse(text);
+      }
+    } catch (e) {
+      console.error("Failed to parse response JSON:", e);
+    }
+        if (res.ok) {
       setStatus("✅ Board deleted");
       fetchBoards();
     } else {
