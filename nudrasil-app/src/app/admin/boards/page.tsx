@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Board } from '@/models/board'
+import { Board } from "@/models/board";
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState([]);
@@ -13,7 +13,7 @@ export default function BoardsPage() {
 
   const fetchBoards = async () => {
     const res = await fetch("/api/admin/boards");
-  
+
     let result = null;
     try {
       const text = await res.text();
@@ -23,13 +23,13 @@ export default function BoardsPage() {
     } catch (e) {
       console.error("Failed to parse boards response:", e);
     }
-  
+
     if (res.ok && result?.data) {
       setBoards(result.data);
     } else {
       console.error("Failed to load boards", result);
     }
-  };  
+  };
 
   const createBoard = async () => {
     const res = await fetch("/api/admin/boards", {
@@ -37,7 +37,7 @@ export default function BoardsPage() {
       body: JSON.stringify({ name, location, secret }),
       headers: { "Content-Type": "application/json" },
     });
-  
+
     let result = null;
     try {
       const text = await res.text();
@@ -47,7 +47,7 @@ export default function BoardsPage() {
     } catch (e) {
       console.error("Failed to parse response JSON:", e);
     }
-  
+
     if (res.ok) {
       setStatus("✅ Board created");
       setName("");
@@ -57,7 +57,7 @@ export default function BoardsPage() {
     } else {
       setStatus(`❌ ${result?.error || "Unknown error"}`);
     }
-  };  
+  };
 
   const updateBoard = async () => {
     const res = await fetch("/api/admin/boards", {
@@ -76,7 +76,7 @@ export default function BoardsPage() {
       console.error("Failed to parse response JSON:", e);
     }
 
-        if (res.ok) {
+    if (res.ok) {
       setStatus("✅ Board updated");
       setName("");
       setLocation("");
@@ -109,7 +109,7 @@ export default function BoardsPage() {
     } catch (e) {
       console.error("Failed to parse response JSON:", e);
     }
-        if (res.ok) {
+    if (res.ok) {
       setStatus("✅ Board deleted");
       fetchBoards();
     } else {
