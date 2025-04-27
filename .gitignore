@@ -54,7 +54,11 @@ firmware/**/*.elf
 firmware/**/*.hex
 firmware/**/*.map
 firmware/platformio.ini.swp
+firmware/**/.gitignore
 
 # OS Generated
 Thumbs.db
 Desktop.ini
+
+# Firmware secrets
+firmware/**/src/secrets.h

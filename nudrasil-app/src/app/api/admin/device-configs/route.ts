@@ -9,13 +9,23 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const secret = url.searchParams.get("secret");
+  const deviceId = url.searchParams.get("deviceId");
 
   if (secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const configs = await db.select().from(device_configs);
-  return NextResponse.json(configs);
+  if (deviceId) {
+    const configs = await db
+      .select()
+      .from(device_configs)
+      .where(eq(device_configs.device_id, deviceId));
+
+    return NextResponse.json(configs);
+  } else {
+    const configs = await db.select().from(device_configs);
+    return NextResponse.json(configs);
+  }
 }
 
 export async function POST(req: NextRequest) {
