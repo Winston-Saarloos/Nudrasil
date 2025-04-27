@@ -69,3 +69,17 @@ EXECUTE FUNCTION update_updated_at_column();
 
 -- Index to speed up time-based queries
 CREATE INDEX idx_sensor_readings_time ON sensor_readings(reading_time);
+
+-- New: Device Configs Table
+CREATE TABLE device_configs (
+  id SERIAL PRIMARY KEY,
+  device_id TEXT UNIQUE NOT NULL,
+  config JSONB NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TRIGGER set_updated_at_device_configs
+BEFORE UPDATE ON device_configs
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
