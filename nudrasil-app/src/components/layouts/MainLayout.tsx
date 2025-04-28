@@ -19,6 +19,12 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
       <Button variant="ghost" className="justify-start">
         <Link href="/admin/board-configs">Board Config</Link>
       </Button>
+      <Button variant="ghost" className="justify-start">
+        <Link href="/admin/sensors">Sensors Config</Link>
+      </Button>
+      <Button variant="ghost" className="justify-start">
+        <Link href="/admin/sensor-types">Sensors Types Config</Link>
+      </Button>
     </>
   );
 
