@@ -174,13 +174,15 @@ export default function SensorsAdminPage() {
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
-              <SelectContent>
-                {types.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {types && types.length > 0 && (
+                <SelectContent>
+                  {types.map((type) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              )}
             </Select>
             <Select
               value={newSensor.boardId}
@@ -191,13 +193,15 @@ export default function SensorsAdminPage() {
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Board" />
               </SelectTrigger>
-              <SelectContent>
-                {boards.map((board) => (
-                  <SelectItem key={board.id} value={board.id.toString()}>
-                    {board.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {boards && boards.length > 0 && (
+                <SelectContent>
+                  {boards.map((board) => (
+                    <SelectItem key={board.id} value={board.id.toString()}>
+                      {board.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              )}
             </Select>
 
             <Button onClick={createOrUpdateSensor}>
