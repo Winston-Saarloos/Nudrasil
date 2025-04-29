@@ -14,6 +14,10 @@ DHT dht(DHTPIN, DHTTYPE);
 String serverIp = "";
 int serverPort = 0;
 
+// Sensor Names
+String temperatureSensorName = "dht22-temp-001";
+String humiditySensorName = "dh22-humidity-001";
+
 void fetchServerConfig() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -95,21 +99,23 @@ void loop() {
 
     String serverUrl = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
 
-    // --- Post Temperature ---
-    HTTPClient http;
     WiFiClient wifiClient;
+    HTTPClient http;
 
+    // --- Post Temperature ---
     http.begin(wifiClient, serverUrl);
     http.addHeader("Content-Type", "application/json");
-    String tempPayload = "{\"sensor\":\"dht22-temp\",\"value\":" + String(t, 2) + "}";
+    String tempPayload = "{\"sensor\":\"" + temperatureSensorName +
+                         "\",\"value\":" + String(t, 2) + "}";
     int httpCode1 = http.POST(tempPayload);
     Serial.println("Temp POST status: " + String(httpCode1));
     http.end();
-
+    
     // --- Post Humidity ---
     http.begin(wifiClient, serverUrl);
     http.addHeader("Content-Type", "application/json");
-    String humPayload = "{\"sensor\":\"dht22-humidity\",\"value\":" + String(h, 2) + "}";
+    String humPayload = "{\"sensor\":\"" + humiditySensorName +
+                        "\",\"value\":" + String(h, 2) + "}";
     int httpCode2 = http.POST(humPayload);
     Serial.println("Humidity POST status: " + String(httpCode2));
     http.end();
