@@ -215,32 +215,34 @@ export default function SensorsAdminPage() {
             )}
           </div>
 
-          <ul className="space-y-2">
-            {sensors.map((sensor) => (
-              <li
-                key={sensor.id}
-                className="border p-2 rounded flex justify-between items-center"
-              >
-                <span>
-                  {sensor.name} ({sensor.location}) - Type {sensor.typeId}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => startEditing(sensor)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => deleteSensor(sensor.id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {sensors && sensors.length > 0 && (
+            <ul className="space-y-2">
+              {sensors.map((sensor) => (
+                <li
+                  key={sensor.id}
+                  className="border p-2 rounded flex justify-between items-center"
+                >
+                  <span>
+                    {sensor.name} ({sensor.location}) - Type {sensor.typeId}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => startEditing(sensor)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteSensor(sensor.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
     </div>
