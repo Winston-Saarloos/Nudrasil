@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SensorData } from "@/models/sensorData";
 import {
   LineChart,
   Line,
@@ -16,6 +15,7 @@ import {
 
 interface ChartPoint {
   time: string;
+  timestamp: string;
   temp?: number;
   humidity?: number;
 }
@@ -27,28 +27,40 @@ export default function SensorPage() {
     const fetchData = async () => {
       try {
         const res = await fetch("/api/sensor");
-        const text = await res.text();
-        if (!text) return;
+        const json = await res.json();
+        const data = json.data as {
+          sensorId: number;
+          value: number;
+          readingTime: string;
+        }[];
 
-        const json = JSON.parse(text);
-        const data = json.data as SensorData[];
+        // Group by readingTime string
+        const grouped: Record<string, ChartPoint> = {};
 
-        // Sort by time descending, take last 50 entries
-        const sorted = [...data].sort((a, b) => a.time - b.time);
-        const last50 = sorted.slice(0, 50);
+        for (const item of data) {
+          const date = new Date(item.readingTime);
 
-        const grouped: { [timestamp: number]: ChartPoint } = {};
+          // Round to the start of the minute
+          date.setSeconds(0);
+          date.setMilliseconds(0);
+          const key = date.toLocaleString();
 
-        for (const item of last50) {
-          const time = new Date(item.time).toLocaleTimeString();
-          if (!grouped[item.time]) {
-            grouped[item.time] = { time };
+          const formatted = date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          if (!grouped[key]) {
+            grouped[key] = {
+              time: formatted,
+              timestamp: key,
+            };
           }
-          if (item.sensor === "dht22-temp") {
-            // Convert °C to °F
-            grouped[item.time].temp = (item.value * 9) / 5 + 32;
-          } else if (item.sensor === "dht22-humidity") {
-            grouped[item.time].humidity = item.value;
+
+          if (item.sensorId === 1) {
+            grouped[key].temp = (item.value * 9) / 5 + 32;
+          } else if (item.sensorId === 2) {
+            grouped[key].humidity = item.value;
           }
         }
 
@@ -92,7 +104,16 @@ export default function SensorPage() {
         <ResponsiveContainer>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis dataKey="time" stroke="currentColor" />
+            <XAxis
+              dataKey="timestamp"
+              stroke="currentColor"
+              tickFormatter={(value) =>
+                new Date(value).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              }
+            />
             <YAxis
               yAxisId="left"
               stroke="currentColor"
@@ -143,19 +164,14 @@ export default function SensorPage() {
           <div className="text-sm space-y-1 text-zinc-800 dark:text-zinc-100">
             <p>
               <span className="font-medium">Time (most recent):</span>
-              {new Date(
-                Math.max(
-                  new Date(latestTemp.time).getTime(),
-                  new Date(latestHumidity.time).getTime(),
-                ),
-              ).toLocaleString()}
+              {new Date(latestTemp.timestamp).toLocaleString()}
             </p>
             <p>
-              <span className="font-medium">Temperature:</span>
+              <span className="font-medium">Temperature: </span>
               {latestTemp.temp?.toFixed(1)} °F
             </p>
             <p>
-              <span className="font-medium">Humidity:</span>
+              <span className="font-medium">Humidity: </span>
               {latestHumidity.humidity?.toFixed(1)}%
             </p>
           </div>
