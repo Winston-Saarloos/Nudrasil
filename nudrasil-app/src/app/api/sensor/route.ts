@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sensors, sensorReadings } from "@root/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -62,7 +62,7 @@ export async function GET(): Promise<NextResponse> {
         readingTime: sensorReadings.readingTime,
       })
       .from(sensorReadings)
-      .orderBy(sensorReadings.readingTime)
+      .orderBy(desc(sensorReadings.readingTime))
       .limit(100);
 
     // Convert readingTime to ISO 8601 strings (if needed)
