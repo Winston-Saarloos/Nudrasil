@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sensors, sensorReadings } from "@root/drizzle/schema";
+import { sensors, sensorReadings, boards } from "@root/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -17,10 +17,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const readingTime = new Date().toISOString(); // Ensure UTC ISO string
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "0.0.0.0";
 
     // 1. Find sensor by name
     const sensorResult = await db
-      .select({ id: sensors.id })
+      .select({ id: sensors.id, boardId: sensors.boardId })
       .from(sensors)
       .where(eq(sensors.name, body.sensor))
       .limit(1);
@@ -34,13 +36,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const sensorId = sensorResult[0].id;
+    const boardId = sensorResult[0].boardId;
 
     // 2. Insert new reading
     await db.insert(sensorReadings).values({
       sensorId: sensorId,
       value: body.value,
-      readingTime: readingTime, // ✅ Store as ISO string
+      readingTime: readingTime, // Store as ISO string
     });
+
+    if (boardId) {
+      await db
+        .update(boards)
+        .set({ lastKnownIp: ip })
+        .where(eq(boards.id, boardId));
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

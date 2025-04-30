@@ -1,9 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include "DHT.h"
 #include "secrets.h" 
+
+ESP8266WebServer server(80);
 
 // DHT sensor config
 #define DHTPIN 4        // GPIO4 (D2 on NodeMCU)
@@ -13,6 +16,10 @@ DHT dht(DHTPIN, DHTTYPE);
 // Server details fetched from config
 String serverIp = "";
 int serverPort = 0;
+
+// Timing
+unsigned long lastSent = 0;
+const unsigned long interval = 600000; // 10 minutes in ms
 
 // Sensor Names
 String temperatureSensorName = "dht22-temp-001";
@@ -82,46 +89,55 @@ void setup() {
   Serial.print("ESP IP address: ");
   Serial.println(WiFi.localIP());
 
+  server.on("/health", HTTP_GET, []() {
+    server.send(200, "text/plain", "healthy");
+  });
+  
+  server.begin();
+  Serial.println("Local web server started");
+
   // Fetch configuration from server
   fetchServerConfig();
 }
 
 void loop() {
+  server.handleClient(); // Check HTTP requests
+
   if (WiFi.status() == WL_CONNECTED && serverIp != "") {
-    float h = dht.readHumidity();
-    float t = dht.readTemperature(); // Celsius
+    unsigned long now = millis();
+    if (now - lastSent >= interval) {
+      lastSent = now;
 
-    if (isnan(h) || isnan(t)) {
-      Serial.println("Failed to read from DHT sensor!");
-      delay(10000);
-      return;
-    }
+      float h = dht.readHumidity();
+      float t = dht.readTemperature(); // Celsius
 
-    String serverUrl = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
+      if (isnan(h) || isnan(t)) {
+        Serial.println("Failed to read from DHT sensor!");
+        return;
+      }
 
-    WiFiClient wifiClient;
-    HTTPClient http;
+      String serverUrl = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
+
+      WiFiClient wifiClient;
+      HTTPClient http;
 
     // --- Post Temperature ---
-    http.begin(wifiClient, serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    String tempPayload = "{\"sensor\":\"" + temperatureSensorName +
-                         "\",\"value\":" + String(t, 2) + "}";
-    int httpCode1 = http.POST(tempPayload);
-    Serial.println("Temp POST status: " + String(httpCode1));
-    http.end();
-    
-    // --- Post Humidity ---
-    http.begin(wifiClient, serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    String humPayload = "{\"sensor\":\"" + humiditySensorName +
-                        "\",\"value\":" + String(h, 2) + "}";
-    int httpCode2 = http.POST(humPayload);
-    Serial.println("Humidity POST status: " + String(httpCode2));
-    http.end();
-  } else {
-    Serial.println("WiFi not connected or server config missing.");
-  }
+      http.begin(wifiClient, serverUrl);
+      http.addHeader("Content-Type", "application/json");
+      String tempPayload = "{\"sensor\":\"" + temperatureSensorName +
+                           "\",\"value\":" + String(t, 2) + "}";
+      int httpCode1 = http.POST(tempPayload);
+      Serial.println("Temp POST status: " + String(httpCode1));
+      http.end();
 
-  delay(60000 * 10); // Wait 10 minutes
+    // --- Post Humidity ---
+      http.begin(wifiClient, serverUrl);
+      http.addHeader("Content-Type", "application/json");
+      String humPayload = "{\"sensor\":\"" + humiditySensorName +
+                          "\",\"value\":" + String(h, 2) + "}";
+      int httpCode2 = http.POST(humPayload);
+      Serial.println("Humidity POST status: " + String(httpCode2));
+      http.end();
+    }
+  }
 }

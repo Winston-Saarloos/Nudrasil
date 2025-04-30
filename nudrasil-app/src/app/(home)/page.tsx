@@ -13,6 +13,13 @@ import {
 } from "recharts";
 //import { Button } from "@/components/ui/button";
 
+interface BoardStatus {
+  id: number;
+  name: string;
+  status: "healthy" | "unreachable" | "invalid-response";
+  latencyMs: number | null;
+}
+
 interface ChartPoint {
   time: string;
   timestamp: string;
@@ -21,7 +28,18 @@ interface ChartPoint {
 }
 
 export default function SensorPage() {
+  const [statusList, setStatusList] = useState<BoardStatus[]>([]);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const res = await fetch("/api/boards/status");
+      const json = await res.json();
+      setStatusList(json.data);
+    };
+
+    fetchStatus();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,6 +195,24 @@ export default function SensorPage() {
           </div>
         </div>
       )}
+      <div className="p-4">
+        <h2 className="text-xl font-semibold mb-2">Board Status</h2>
+        <ul className="space-y-2">
+          {statusList.map((board) => (
+            <li
+              key={board.id}
+              className={`p-2 rounded border ${
+                board.status === "healthy"
+                  ? "border-green-500"
+                  : "border-red-500"
+              }`}
+            >
+              <strong>{board.name}</strong>: {board.status}
+              {board.latencyMs !== null && ` (${board.latencyMs} ms)`}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

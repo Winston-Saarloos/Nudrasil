@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   index,
+  inet,
 } from "drizzle-orm/pg-core";
 
 // --- Boards Table ---
@@ -16,6 +17,7 @@ export const boards = pgTable("boards", {
   identifier: uuid("identifier").defaultRandom().notNull(),
   name: text("name").notNull(),
   location: text("location"),
+  lastKnownIp: inet("last_known_ip"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
