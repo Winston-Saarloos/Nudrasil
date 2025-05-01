@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { DateTime } from "luxon";
 //import { Button } from "@/components/ui/button";
 
 interface BoardStatus {
@@ -56,17 +57,15 @@ export default function SensorPage() {
         const grouped: Record<string, ChartPoint> = {};
 
         for (const item of data) {
-          const date = new Date(item.readingTime);
+          const dt = DateTime.fromISO(item.readingTime, { zone: "utc" })
+            .toLocal()
+            .startOf("minute");
+          const iso = dt.toISO();
 
-          // Round to the start of the minute
-          date.setSeconds(0);
-          date.setMilliseconds(0);
-          const key = date.toLocaleString();
+          if (!iso) continue; // skip if invalid ISO string
 
-          const formatted = date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          const key = iso;
+          const formatted = dt.toFormat("hh:mm a");
 
           if (!grouped[key]) {
             grouped[key] = {
@@ -126,10 +125,7 @@ export default function SensorPage() {
               dataKey="timestamp"
               stroke="currentColor"
               tickFormatter={(value) =>
-                new Date(value).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
               }
             />
             <YAxis
@@ -181,8 +177,10 @@ export default function SensorPage() {
           </h3>
           <div className="text-sm space-y-1 text-zinc-800 dark:text-zinc-100">
             <p>
-              <span className="font-medium">Time (most recent):</span>
-              {new Date(latestTemp.timestamp).toLocaleString()}
+              <span className="font-medium">Time (most recent):</span>{" "}
+              {DateTime.fromISO(latestTemp.timestamp)
+                .toLocal()
+                .toLocaleString(DateTime.DATETIME_MED)}
             </p>
             <p>
               <span className="font-medium">Temperature: </span>
