@@ -16,8 +16,8 @@ CREATE TABLE boards (
   identifier UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   location TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TRIGGER set_updated_at_boards
@@ -29,7 +29,7 @@ EXECUTE FUNCTION update_updated_at_column();
 CREATE TABLE sensor_types (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TRIGGER set_updated_at_sensor_types
@@ -44,8 +44,8 @@ CREATE TABLE sensors (
   type_id INTEGER NOT NULL REFERENCES sensor_types(id) ON DELETE RESTRICT,
   location TEXT NOT NULL,
   board_id INTEGER REFERENCES boards(id) ON DELETE SET NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TRIGGER set_updated_at_sensors
@@ -58,8 +58,8 @@ CREATE TABLE sensor_readings (
   id SERIAL PRIMARY KEY,
   sensor_id INTEGER NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
   value DOUBLE PRECISION NOT NULL,
-  reading_time TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  reading_time TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TRIGGER set_updated_at_sensor_readings
@@ -75,8 +75,8 @@ CREATE TABLE device_configs (
   id SERIAL PRIMARY KEY,
   device_id TEXT UNIQUE NOT NULL,
   config JSONB NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TRIGGER set_updated_at_device_configs
