@@ -83,7 +83,8 @@ export default function SensorPage() {
 
         const finalChartData = Object.values(grouped)
           .sort(
-            (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
           )
           .slice(-50);
 
