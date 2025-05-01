@@ -1,74 +1,134 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
-#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include "DHT.h"
-#include "secrets.h" 
+#include "secrets.h"  // Contains WIFI_SSID, WIFI_PASSWORD, DEVICE_ID, SERVER_URL, CONFIG_PATH, DEVICE_SECRET
 
+// --- Board Setup ---
 ESP8266WebServer server(80);
 
-// DHT sensor config
-#define DHTPIN 4        // GPIO4 (D2 on NodeMCU)
-#define DHTTYPE DHT22   // Can also be DHT11
+// --- DHT Sensor Setup ---
+#define DHTPIN 4
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-// Server details fetched from config
+// --- Config ---
 String serverIp = "";
 int serverPort = 0;
+const char* temperatureSensorName = "dht22-temp-001";
+const char* humiditySensorName = "dh22-humidity-001";
 
-// Timing
+// --- Timers ---
 unsigned long lastSent = 0;
-const unsigned long interval = 600000; // 10 minutes in ms
+const unsigned long sendInterval = (60 * 1000) * 10; // 10 minutes in ms
+unsigned long lastConnectivityCheck = 0;
+const unsigned long connectivityCheckInterval = 10000;
 
-// Sensor Names
-String temperatureSensorName = "dht22-temp-001";
-String humiditySensorName = "dh22-humidity-001";
+// --- Debug Mode ---
+const bool debugMode = false;
+template <typename T> void debug(const T& msg) { if (debugMode) Serial.println(msg); }
+template <typename T> void debugInline(const T& msg) { if (debugMode) Serial.print(msg); }
 
-void fetchServerConfig() {
+// --- Connectivity Check ---
+bool checkConnectivity() {
+  unsigned long now = millis();
+  if (now - lastConnectivityCheck < connectivityCheckInterval) return true;
+  lastConnectivityCheck = now;
+
+  if (serverIp == "") return false; // Fallback
+
+  HTTPClient http;
+  WiFiClient client;
+  http.setTimeout(1000);
+  String probeUrl = "http://app.nudrasil.com/api/probe";
+  debug(probeUrl);
+  http.begin(client, probeUrl);
+  int code = http.GET();
+  http.end();
+
+  if (code == 200) return true;
+
+  debug("Probe failed (" + String(code) + "): " + HTTPClient::errorToString(code));
+  WiFi.disconnect();
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
+    delay(500);
+    debugInline(".");
+  }
+
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    WiFiClient wifiClient;
+    debug("\n[WiFi] Reconnected");
+    return true;
+  } else {
+    debug("\n[WiFi] Failed to reconnect");
+    return false;
+  }
+}
 
-    Serial.println("Fetching config from server...");
-    String configUrl = String(SERVER_URL) + String(CONFIG_PATH) + "?secret=" + DEVICE_SECRET + "&deviceId=" + DEVICE_ID;
+// --- Fetch Config ---
+void fetchServerConfig() {
+  if (WiFi.status() != WL_CONNECTED) {
+    debug("Skipping config fetch: no WiFi.");
+    return;
+  }
 
-    http.begin(wifiClient, configUrl);
-    int httpCode = http.GET();
+  HTTPClient http;
+  WiFiClient client;
+  String url = String(SERVER_URL) + CONFIG_PATH + "?secret=" + DEVICE_SECRET + "&deviceId=" + DEVICE_ID;
 
-    if (httpCode == 200) {
-      String payload = http.getString();
+  debug("Fetching config: " + url);
+  http.begin(client, url);
+  int code = http.GET();
 
-      // Parse JSON
-      JsonDocument doc;
-      DeserializationError error = deserializeJson(doc, payload);
+  if (code == 200) {
+    String payload = http.getString();
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
 
-      if (error) {
-        Serial.print("JSON parse error: ");
-        Serial.println(error.c_str());
-        return;
-      }
-
-      JsonObject device = doc[0];
-      JsonObject config = device["config"];
-      
-      String defaultEnv = config["defaultEnv"] | "prod";
-      JsonObject env = config["environments"][defaultEnv];
-      
-      serverIp = env["ip"].as<String>();
-      serverPort = env["port"].as<int>();
-
-      Serial.println("Using server IP: " + serverIp);
-      Serial.println("Using server Port: " + String(serverPort));
-    } else {
-      Serial.print("Failed to fetch config, HTTP code: ");
-      Serial.println(httpCode);
+    if (error) {
+      debug("JSON parse error: " + String(error.c_str()));
+      return;
     }
 
-    http.end();
+    JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
+    serverIp = env["ip"].as<String>();
+    serverPort = env["port"].as<int>();
+
+    debug("Server IP: " + serverIp);
+    debug("Server Port: " + String(serverPort));
   } else {
-    Serial.println("WiFi not connected when fetching config.");
+    debug("Failed to fetch config. HTTP code: " + String(code));
   }
+
+  http.end();
+}
+
+// --- POST Sensor Data ---
+void postSensorData(float tempC, float humidity) {
+  if (serverIp == "") return;
+
+  String url = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
+  WiFiClient client;
+  HTTPClient http;
+
+  // Temperature
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  String tempPayload = "{\"sensor\":\"" + String(temperatureSensorName) + "\",\"value\":" + String(tempC, 2) + "}";
+  int tempStatus = http.POST(tempPayload);
+  debug("Temp POST: " + String(tempStatus));
+  http.end();
+
+  // Humidity
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  String humPayload = "{\"sensor\":\"" + String(humiditySensorName) + "\",\"value\":" + String(humidity, 2) + "}";
+  int humStatus = http.POST(humPayload);
+  debug("Humidity POST: " + String(humStatus));
+  http.end();
 }
 
 void setup() {
@@ -77,67 +137,45 @@ void setup() {
 
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  Serial.println("Connecting to WiFi...");
+  debug("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    debugInline(".");
   }
 
-  Serial.println("\nConnected to WiFi!");
-  Serial.print("ESP IP address: ");
-  Serial.println(WiFi.localIP());
+  debug("\nConnected!");
+  debug("IP: " + WiFi.localIP().toString());
 
   server.on("/health", HTTP_GET, []() {
     server.send(200, "text/plain", "healthy");
   });
-  
   server.begin();
-  Serial.println("Local web server started");
+  debug("Web server started");
 
-  // Fetch configuration from server
   fetchServerConfig();
 }
 
 void loop() {
-  server.handleClient(); // Check HTTP requests
+  server.handleClient();
 
-  if (WiFi.status() == WL_CONNECTED && serverIp != "") {
-    unsigned long now = millis();
-    if (now - lastSent >= interval) {
-      lastSent = now;
+  if (!checkConnectivity()) return;
 
-      float h = dht.readHumidity();
-      float t = dht.readTemperature(); // Celsius
+  unsigned long now = millis();
+  if (now - lastSent >= sendInterval) {
+    lastSent = now;
 
-      if (isnan(h) || isnan(t)) {
-        Serial.println("Failed to read from DHT sensor!");
-        return;
-      }
+    float tempC = dht.readTemperature();
+    float hum = dht.readHumidity();
 
-      String serverUrl = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
-
-      WiFiClient wifiClient;
-      HTTPClient http;
-
-    // --- Post Temperature ---
-      http.begin(wifiClient, serverUrl);
-      http.addHeader("Content-Type", "application/json");
-      String tempPayload = "{\"sensor\":\"" + temperatureSensorName +
-                           "\",\"value\":" + String(t, 2) + "}";
-      int httpCode1 = http.POST(tempPayload);
-      Serial.println("Temp POST status: " + String(httpCode1));
-      http.end();
-
-    // --- Post Humidity ---
-      http.begin(wifiClient, serverUrl);
-      http.addHeader("Content-Type", "application/json");
-      String humPayload = "{\"sensor\":\"" + humiditySensorName +
-                          "\",\"value\":" + String(h, 2) + "}";
-      int httpCode2 = http.POST(humPayload);
-      Serial.println("Humidity POST status: " + String(httpCode2));
-      http.end();
+    if (isnan(tempC) || isnan(hum)) {
+      debug("DHT read failed.");
+      return;
     }
+
+    debug("Sending readings: Temp=" + String(tempC) + "C, Humidity=" + String(hum) + "%");
+    postSensorData(tempC, hum);
   }
 }
