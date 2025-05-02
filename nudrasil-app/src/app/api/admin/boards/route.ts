@@ -12,7 +12,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { name, location, secret } = await req.json();
 
-  if (secret !== process.env.ADMIN_SENSOR_SECRET) {
+  if (secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { id, name, location, secret } = await req.json();
 
-  if (secret !== process.env.ADMIN_SENSOR_SECRET) {
+  if (secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { id, secret } = await req.json();
 
-  if (secret !== process.env.ADMIN_SENSOR_SECRET) {
+  if (secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

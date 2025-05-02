@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,26 +27,36 @@ interface Board {
 export default function DeviceConfigsAdminPage() {
   const [secret, setSecret] = useState("");
   const [configs, setConfigs] = useState<DeviceConfig[]>([]);
-  const [boards, setBoards] = useState<Board[]>([]); // ✅ Boards state
+  const [boards, setBoards] = useState<Board[]>([]);
   const [newDeviceId, setNewDeviceId] = useState("");
   const [newConfig, setNewConfig] = useState("{}");
   const [unlocked, setUnlocked] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
-  const fetchConfigs = async () => {
-    const res = await fetch(`/api/admin/device-configs?secret=${secret}`);
+  useEffect(() => {
+    const storedSecret = localStorage.getItem("admin_secret");
+    if (storedSecret) {
+      setSecret(storedSecret);
+      attemptUnlock(storedSecret);
+    }
+  }, []);
+
+  const attemptUnlock = async (value: string) => {
+    const res = await fetch(`/api/admin/device-configs?secret=${value}`);
     if (res.ok) {
       const data = await res.json();
       setConfigs(data);
       setUnlocked(true);
-      fetchBoards(); // ✅ Also fetch boards once unlocked
-    } else {
-      alert("Invalid secret");
+      fetchBoards(value);
     }
   };
 
-  const fetchBoards = async () => {
-    const res = await fetch(`/api/admin/boards`);
+  const fetchBoards = async (adminSecret = secret) => {
+    const res = await fetch(`/api/admin/boards`, {
+      headers: {
+        Authorization: adminSecret,
+      },
+    });
     if (res.ok) {
       const json = await res.json();
       setBoards(json.data);
@@ -92,7 +102,7 @@ export default function DeviceConfigsAdminPage() {
     });
 
     if (res.ok) {
-      await fetchConfigs();
+      await attemptUnlock(secret);
       setNewDeviceId("");
       setNewConfig("{}");
     } else {
@@ -115,7 +125,7 @@ export default function DeviceConfigsAdminPage() {
       });
 
       if (res.ok) {
-        await fetchConfigs();
+        await attemptUnlock(secret);
       } else {
         alert("Failed to update config");
       }
@@ -134,7 +144,7 @@ export default function DeviceConfigsAdminPage() {
     });
 
     if (res.ok) {
-      await fetchConfigs();
+      await attemptUnlock(secret);
     } else {
       alert("Failed to delete config");
     }
@@ -150,15 +160,17 @@ export default function DeviceConfigsAdminPage() {
             type="password"
             placeholder="Enter Admin Secret"
             value={secret}
-            onChange={(e) => setSecret(e.target.value)}
+            onChange={(e) => {
+              setSecret(e.target.value);
+              localStorage.setItem("admin_secret", e.target.value);
+            }}
           />
-          <Button onClick={fetchConfigs}>Load Configs</Button>
+          <Button onClick={() => attemptUnlock(secret)}>Load Configs</Button>
         </div>
       )}
 
       {unlocked && (
         <>
-          {/* Existing configs */}
           {configs.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {configs.map((config) => (
@@ -202,7 +214,6 @@ export default function DeviceConfigsAdminPage() {
             </div>
           )}
 
-          {/* New config creation */}
           <div>
             <h2 className="text-2xl font-semibold mt-10 mb-4">
               Create New Config
@@ -233,7 +244,6 @@ export default function DeviceConfigsAdminPage() {
             </div>
           </div>
 
-          {/* Available Boards */}
           <div className="mt-12">
             <h2 className="text-2xl font-semibold mb-4">Available Boards</h2>
             {boards.length > 0 ? (
@@ -242,7 +252,7 @@ export default function DeviceConfigsAdminPage() {
                   <Card key={board.id}>
                     <CardContent>
                       <p className="text-muted-foreground">
-                        {`${board.name} (ID: ${board.id} ) ${board.location ? board.location : ""}`}
+                        {`${board.name} (ID: ${board.id}) ${board.location ? board.location : ""}`}
                       </p>
                     </CardContent>
                   </Card>
