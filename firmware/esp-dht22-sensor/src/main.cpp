@@ -13,11 +13,15 @@ ESP8266WebServer server(80);
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
+// --- Moisture Sensor Setup ---
+const int moisturePin = A0;
+
 // --- Config ---
 String serverIp = "";
 int serverPort = 0;
 const char* temperatureSensorName = "dht22-temp-001";
 const char* humiditySensorName = "dh22-humidity-001";
+const char* moistureSensorName = "soil-moisture-001";
 
 // --- Timers ---
 unsigned long lastSent = 0;
@@ -107,7 +111,7 @@ void fetchServerConfig() {
 }
 
 // --- POST Sensor Data ---
-void postSensorData(float tempC, float humidity) {
+void postSensorData(float tempC, float humidity, int moisture) {
   if (serverIp == "") return;
 
   String url = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
@@ -128,6 +132,14 @@ void postSensorData(float tempC, float humidity) {
   String humPayload = "{\"sensor\":\"" + String(humiditySensorName) + "\",\"value\":" + String(humidity, 2) + "}";
   int humStatus = http.POST(humPayload);
   debug("Humidity POST: " + String(humStatus));
+  http.end();
+
+  // Soil Moisture
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  String moistPayload = "{\"sensor\":\"" + String(moistureSensorName) + "\",\"value\":" + String(moisture) + "}";
+  int moistStatus = http.POST(moistPayload);
+  debug("Moisture POST: " + String(moistStatus));
   http.end();
 }
 
@@ -169,13 +181,14 @@ void loop() {
 
     float tempC = dht.readTemperature();
     float hum = dht.readHumidity();
+    int moisture = analogRead(moisturePin); // Read 0–1023
 
     if (isnan(tempC) || isnan(hum)) {
       debug("DHT read failed.");
       return;
     }
 
-    debug("Sending readings: Temp=" + String(tempC) + "C, Humidity=" + String(hum) + "%");
-    postSensorData(tempC, hum);
+    debug("Sending readings: Temp=" + String(tempC) + "C, Humidity=" + String(hum) + "%, Moisture=" + String(moisture));
+    postSensorData(tempC, hum, moisture);
   }
 }
