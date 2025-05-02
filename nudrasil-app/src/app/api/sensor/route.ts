@@ -62,8 +62,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
+    const { searchParams } = new URL(req.url);
+    const sensorIdParam = searchParams.get("sensorId");
+    const sensorId = sensorIdParam ? parseInt(sensorIdParam, 10) : null;
+
+    if (sensorIdParam && (isNaN(sensorId!) || sensorId! <= 0)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid sensorId" },
+        { status: 400 },
+      );
+    }
+
     const rawReadings = await db
       .select({
         id: sensorReadings.id,
@@ -72,15 +83,15 @@ export async function GET(): Promise<NextResponse> {
         readingTime: sensorReadings.readingTime,
       })
       .from(sensorReadings)
+      .where(sensorId ? eq(sensorReadings.sensorId, sensorId) : undefined)
       .orderBy(desc(sensorReadings.readingTime))
-      .limit(100);
+      .limit(200);
 
-    // Convert readingTime to ISO 8601 strings (if needed)
     const data = rawReadings.map((r) => ({
       ...r,
       readingTime: r.readingTime
         ? new Date(r.readingTime).toISOString()
-        : new Date().toISOString(), // fallback if null
+        : new Date().toISOString(),
     }));
 
     return NextResponse.json({ data });

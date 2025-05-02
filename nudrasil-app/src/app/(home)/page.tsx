@@ -10,9 +10,38 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  TooltipProps,
 } from "recharts";
 import { DateTime } from "luxon";
-//import { Button } from "@/components/ui/button";
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: TooltipProps<string, string>) => {
+  if (active && payload && payload.length) {
+    const localTime = DateTime.fromISO(label)
+      .toLocal()
+      .toFormat("MM/dd hh:mm a");
+
+    return (
+      <div className="bg-zinc-800 text-white p-3 rounded shadow text-sm">
+        <p className="font-semibold">{localTime}</p>
+        {payload.map((entry, index) => (
+          <p key={index}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+interface SensorReading {
+  value: number;
+  readingTime: string;
+}
 
 interface BoardStatus {
   id: number;
@@ -26,6 +55,27 @@ interface ChartPoint {
   timestamp: string;
   temp?: number;
   humidity?: number;
+  soil?: number;
+}
+
+function calculateMoisturePercent(rawValue: number): number {
+  const dry = 577;
+  const wet = 256;
+  const clamped = Math.max(Math.min(rawValue, dry), wet);
+  const percent = ((dry - clamped) / (dry - wet)) * 100;
+  return Math.round(percent);
+}
+
+function moistureDescription(percent: number): string {
+  if (percent >= 75) return "Wet";
+  if (percent >= 40) return "Moist";
+  return "Dry";
+}
+
+function moistureColor(percent: number): string {
+  if (percent >= 75) return "text-green-600";
+  if (percent >= 40) return "text-yellow-600";
+  return "text-red-600";
 }
 
 export default function SensorPage() {
@@ -43,82 +93,93 @@ export default function SensorPage() {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSensorData = async () => {
       try {
-        const res = await fetch("/api/sensor");
-        const json = await res.json();
-        const data = json.data as {
-          sensorId: number;
-          value: number;
-          readingTime: string;
-        }[];
+        const [tempRes, humidityRes, soilRes] = await Promise.all([
+          fetch("/api/sensor?sensorId=1"),
+          fetch("/api/sensor?sensorId=2"),
+          fetch("/api/sensor?sensorId=3"),
+        ]);
 
-        // Group by readingTime string
-        const grouped: Record<string, ChartPoint> = {};
+        const tempJson: { data: SensorReading[] } = await tempRes.json();
+        const humidityJson: { data: SensorReading[] } =
+          await humidityRes.json();
+        const soilJson: { data: SensorReading[] } = await soilRes.json();
 
-        for (const item of data) {
-          const dt = DateTime.fromISO(item.readingTime, { zone: "utc" })
+        const merged: Record<string, ChartPoint> = {};
+
+        const mergeReading = (
+          entry: SensorReading,
+          key: "temp" | "humidity" | "soil",
+        ) => {
+          const dt = DateTime.fromISO(entry.readingTime, { zone: "utc" })
             .toLocal()
             .startOf("minute");
           const iso = dt.toISO();
+          if (!iso) return;
 
-          if (!iso) continue; // skip if invalid ISO string
-
-          const key = iso;
-          const formatted = dt.toFormat("hh:mm a");
-
-          if (!grouped[key]) {
-            grouped[key] = {
-              time: formatted,
-              timestamp: key,
+          if (!merged[iso]) {
+            merged[iso] = {
+              time: dt.toFormat("hh:mm a"),
+              timestamp: iso,
             };
           }
 
-          if (item.sensorId === 1) {
-            grouped[key].temp = (item.value * 9) / 5 + 32;
-          } else if (item.sensorId === 2) {
-            grouped[key].humidity = item.value;
+          if (key === "temp") {
+            merged[iso].temp = (entry.value * 9) / 5 + 32;
+          } else if (key === "humidity") {
+            merged[iso].humidity = entry.value;
+          } else if (key === "soil") {
+            merged[iso].soil = calculateMoisturePercent(entry.value);
           }
-        }
+        };
 
-        const finalChartData = Object.values(grouped)
+        tempJson.data.forEach((r) => mergeReading(r, "temp"));
+        humidityJson.data.forEach((r) => mergeReading(r, "humidity"));
+        soilJson.data.forEach((r) => mergeReading(r, "soil"));
+
+        const sorted = Object.values(merged)
           .sort(
             (a, b) =>
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
           )
           .slice(-50);
 
-        setChartData(finalChartData);
-      } catch (error) {
-        console.error("Failed to fetch sensor data:", error);
+        setChartData(sorted);
+      } catch (err) {
+        console.error("Failed to fetch sensor data:", err);
       }
     };
 
-    fetchData();
-    // Optional: enable live updates
-    const interval = setInterval(fetchData, 30000);
+    fetchSensorData();
+    const interval = setInterval(fetchSensorData, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const latestTemp = [...chartData]
     .reverse()
     .find((data) => data.temp !== undefined);
-
   const latestHumidity = [...chartData]
     .reverse()
     .find((data) => data.humidity !== undefined);
+  const latestSoil = [...chartData]
+    .reverse()
+    .find((data) => data.soil !== undefined);
 
   return (
     <div className="p-6 space-y-4 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
       <h1 className="text-2xl font-bold">Sensor Dashboard</h1>
-      <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-        A large work in progress..
-      </h2>
+      <h3>{"sensor data + charts = <3"}</h3>
       <hr className="border-gray-300 dark:border-gray-700" />
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Data is sent once a minute
       </p>
+
+      {/* Temp/Humidity Chart */}
       <div style={{ width: "100%", height: 300 }}>
+        <h2 className="text-1xl font-bold mb-4">
+          Ambient Temperature & Humidity
+        </h2>
         <ResponsiveContainer>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -139,13 +200,7 @@ export default function SensorPage() {
                 fill: "currentColor",
               }}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--tooltip-bg, #1f2937)",
-                borderColor: "#444",
-                color: "white",
-              }}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line
               yAxisId="left"
@@ -168,32 +223,77 @@ export default function SensorPage() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {/* <Button variant="outline" onClick={() => location.reload()}>
-        Refresh Page
-      </Button> */}
-      {chartData.length > 0 && latestTemp && latestHumidity && (
-        <div className="mt-4 p-4 rounded-md bg-zinc-100 dark:bg-zinc-800">
+
+      {/* Soil Moisture Chart */}
+      <div style={{ width: "100%", height: 300 }}>
+        <h2 className="text-1xl font-bold mb-4 mt-8">
+          Spider Plant 1 - Soil Moisture %
+        </h2>
+        <ResponsiveContainer>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <XAxis
+              dataKey="timestamp"
+              stroke="currentColor"
+              tickFormatter={(value) =>
+                DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
+              }
+            />
+            <YAxis
+              stroke="currentColor"
+              label={{
+                value: "Soil Moisture (%)",
+                angle: -90,
+                position: "insideLeft",
+                fill: "currentColor",
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="soil"
+              stroke="#ffaa00"
+              name="Soil Moisture (%)"
+              dot={{ r: 3 }}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Latest Readings Summary */}
+      {(latestTemp || latestHumidity || latestSoil) && (
+        <div className="mt-16 p-4 rounded-md bg-zinc-100 dark:bg-zinc-800">
           <h3 className="text-md font-semibold mb-2 text-zinc-700 dark:text-zinc-200">
-            Latest Reading
+            Latest Readings
           </h3>
           <div className="text-sm space-y-1 text-zinc-800 dark:text-zinc-100">
-            <p>
-              <span className="font-medium">Time (most recent):</span>{" "}
-              {DateTime.fromISO(latestTemp.timestamp)
-                .toLocal()
-                .toLocaleString(DateTime.DATETIME_MED)}
-            </p>
-            <p>
-              <span className="font-medium">Temperature: </span>
-              {latestTemp.temp?.toFixed(1)} °F
-            </p>
-            <p>
-              <span className="font-medium">Humidity: </span>
-              {latestHumidity.humidity?.toFixed(1)}%
-            </p>
+            {latestTemp && (
+              <p>
+                <span className="font-medium">Temperature:</span>{" "}
+                {latestTemp.temp?.toFixed(1)} °F
+              </p>
+            )}
+            {latestHumidity && (
+              <p>
+                <span className="font-medium">Humidity:</span>{" "}
+                {latestHumidity.humidity?.toFixed(1)}%
+              </p>
+            )}
+            {latestSoil && (
+              <p>
+                <span className="font-medium">Soil Moisture:</span>{" "}
+                <span className={moistureColor(latestSoil.soil!)}>
+                  {latestSoil.soil}% – {moistureDescription(latestSoil.soil!)}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       )}
+
+      {/* Board Status */}
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-2">Board Status</h2>
         <ul className="space-y-2">
