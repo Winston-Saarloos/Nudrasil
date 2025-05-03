@@ -2,30 +2,33 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
 #include "DHT.h"
-#include "secrets.h"  // Contains WIFI_SSID, WIFI_PASSWORD, DEVICE_ID, SERVER_URL, CONFIG_PATH, DEVICE_SECRET
+#include "secrets.h"
 
 // --- Board Setup ---
 ESP8266WebServer server(80);
+Adafruit_ADS1115 ads;
 
 // --- DHT Sensor Setup ---
-#define DHTPIN 4
+#define DHTPIN 14  // D5 (GPIO14)
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-// --- Moisture Sensor Setup ---
-const int moisturePin = A0;
+// --- Sensor Identifiers ---
+const char* temperatureSensorName = "dht22-temp-001";
+const char* humiditySensorName = "dh22-humidity-001";
+const char* moistureSensorName = "soil-moisture-001";
+const char* lightSensorName = "light-sensor-001";
 
 // --- Config ---
 String serverIp = "";
 int serverPort = 0;
-const char* temperatureSensorName = "dht22-temp-001";
-const char* humiditySensorName = "dh22-humidity-001";
-const char* moistureSensorName = "soil-moisture-001";
 
 // --- Timers ---
 unsigned long lastSent = 0;
-const unsigned long sendInterval = (60 * 1000) * 10; // 10 minutes in ms
+const unsigned long sendInterval = (60 * 1000) * 10;
 unsigned long lastConnectivityCheck = 0;
 const unsigned long connectivityCheckInterval = 10000;
 
@@ -40,21 +43,20 @@ bool checkConnectivity() {
   if (now - lastConnectivityCheck < connectivityCheckInterval) return true;
   lastConnectivityCheck = now;
 
-  if (serverIp == "") return false; // Fallback
+  if (serverIp == "") return false;
 
   HTTPClient http;
   WiFiClient client;
   http.setTimeout(1000);
   String probeUrl = "http://app.nudrasil.com/api/probe";
-  debug(probeUrl);
   http.begin(client, probeUrl);
   int code = http.GET();
   http.end();
 
   if (code == 200) return true;
 
-  debug("Probe failed (" + String(code) + "): " + HTTPClient::errorToString(code));
-  WiFi.disconnect();
+  WiFi.disconnect(true);
+  delay(100);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   unsigned long start = millis();
@@ -63,116 +65,80 @@ bool checkConnectivity() {
     debugInline(".");
   }
 
-  if (WiFi.status() == WL_CONNECTED) {
-    debug("\n[WiFi] Reconnected");
-    return true;
-  } else {
-    debug("\n[WiFi] Failed to reconnect");
-    return false;
-  }
+  return WiFi.status() == WL_CONNECTED;
 }
 
 // --- Fetch Config ---
 void fetchServerConfig() {
-  if (WiFi.status() != WL_CONNECTED) {
-    debug("Skipping config fetch: no WiFi.");
-    return;
-  }
-
+  if (WiFi.status() != WL_CONNECTED) return;
   HTTPClient http;
   WiFiClient client;
   String url = String(SERVER_URL) + CONFIG_PATH + "?secret=" + DEVICE_SECRET + "&deviceId=" + DEVICE_ID;
-
-  debug("Fetching config: " + url);
   http.begin(client, url);
   int code = http.GET();
 
   if (code == 200) {
     String payload = http.getString();
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, payload);
-
-    if (error) {
-      debug("JSON parse error: " + String(error.c_str()));
-      return;
+    if (!deserializeJson(doc, payload)) {
+      JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
+      serverIp = env["ip"].as<String>();
+      serverPort = env["port"].as<int>();
     }
-
-    JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
-    serverIp = env["ip"].as<String>();
-    serverPort = env["port"].as<int>();
-
-    debug("Server IP: " + serverIp);
-    debug("Server Port: " + String(serverPort));
-  } else {
-    debug("Failed to fetch config. HTTP code: " + String(code));
   }
 
   http.end();
 }
 
 // --- POST Sensor Data ---
-void postSensorData(float tempC, float humidity, int moisture) {
+void postSensorData(float tempC, float humidity, int moisture, int light) {
   if (serverIp == "") return;
-
   String url = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
   WiFiClient client;
   HTTPClient http;
 
-  // Temperature
-  http.begin(client, url);
-  http.addHeader("Content-Type", "application/json");
-  String tempPayload = "{\"sensor\":\"" + String(temperatureSensorName) + "\",\"value\":" + String(tempC, 2) + "}";
-  int tempStatus = http.POST(tempPayload);
-  debug("Temp POST: " + String(tempStatus));
-  http.end();
+  struct Sensor {
+    const char* name;
+    float value;
+  } sensors[] = {
+    { temperatureSensorName, tempC },
+    { humiditySensorName, humidity },
+    { moistureSensorName, static_cast<float>(moisture) },
+    { lightSensorName, static_cast<float>(light) }
+  };
 
-  // Humidity
-  http.begin(client, url);
-  http.addHeader("Content-Type", "application/json");
-  String humPayload = "{\"sensor\":\"" + String(humiditySensorName) + "\",\"value\":" + String(humidity, 2) + "}";
-  int humStatus = http.POST(humPayload);
-  debug("Humidity POST: " + String(humStatus));
-  http.end();
-
-  // Soil Moisture
-  http.begin(client, url);
-  http.addHeader("Content-Type", "application/json");
-  String moistPayload = "{\"sensor\":\"" + String(moistureSensorName) + "\",\"value\":" + String(moisture) + "}";
-  int moistStatus = http.POST(moistPayload);
-  debug("Moisture POST: " + String(moistStatus));
-  http.end();
+  for (auto s : sensors) {
+    http.begin(client, url);
+    http.addHeader("Content-Type", "application/json");
+    String payload = String("{\"sensor\":\"") + s.name + "\",\"value\":" + s.value + "}";
+    int status = http.POST(payload);
+    debug(String(s.name) + " POST: " + String(status));
+    http.end();
+  }
 }
 
 void setup() {
   Serial.begin(115200);
   dht.begin();
-
+  Wire.begin(D2, D1);  // SDA, SCL
+  ads.begin();
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  debug("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     debugInline(".");
   }
 
-  debug("\nConnected!");
-  debug("IP: " + WiFi.localIP().toString());
-
-  server.on("/health", HTTP_GET, []() {
-    server.send(200, "text/plain", "healthy");
-  });
+  server.on("/health", HTTP_GET, []() { server.send(200, "text/plain", "healthy"); });
   server.begin();
-  debug("Web server started");
-
   fetchServerConfig();
 }
 
 void loop() {
   server.handleClient();
-
   if (!checkConnectivity()) return;
 
   unsigned long now = millis();
@@ -181,14 +147,24 @@ void loop() {
 
     float tempC = dht.readTemperature();
     float hum = dht.readHumidity();
-    int moisture = analogRead(moisturePin); // Read 0–1023
+    int moisture = ads.readADC_SingleEnded(0);
+    int lightRaw = ads.readADC_SingleEnded(1);
+
+    // Calibrate light (inverted range 200–20000)
+    int minLight = 20000;  // Dark
+    int maxLight = 200;    // Bright
+    int light = map(lightRaw, minLight, maxLight, 0, 100);
+    light = constrain(light, 0, 100);
 
     if (isnan(tempC) || isnan(hum)) {
       debug("DHT read failed.");
       return;
     }
 
-    debug("Sending readings: Temp=" + String(tempC) + "C, Humidity=" + String(hum) + "%, Moisture=" + String(moisture));
-    postSensorData(tempC, hum, moisture);
+    debug("Readings => Temp: " + String(tempC) + "C, Humidity: " + String(hum) + "%");
+    debug("Moisture: " + String(moisture));
+    debug("Light Raw: " + String(lightRaw) + " | Brightness: " + String(light) + "%");
+
+    postSensorData(tempC, hum, moisture, light);
   }
 }
