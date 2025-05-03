@@ -225,7 +225,8 @@ export default function SensorPage() {
               dataKey="temp"
               stroke="#8884d8"
               name="Temp (°F)"
-              dot={{ r: 3 }}
+              dot={false}
+              activeDot={{ r: 4 }}
               connectNulls
             />
             <Line
@@ -234,7 +235,8 @@ export default function SensorPage() {
               dataKey="humidity"
               stroke="#82ca9d"
               name="Humidity (%)"
-              dot={{ r: 3 }}
+              dot={false}
+              activeDot={{ r: 4 }}
               connectNulls
             />
           </LineChart>
@@ -272,7 +274,8 @@ export default function SensorPage() {
               dataKey="soil"
               stroke="#ffaa00"
               name="Soil Moisture (%)"
-              dot={{ r: 3 }}
+              dot={false}
+              activeDot={{ r: 4 }}
               connectNulls
             />
             <Line
@@ -280,7 +283,8 @@ export default function SensorPage() {
               dataKey="light"
               stroke="#00c0ff"
               name="Light (%)"
-              dot={{ r: 3 }}
+              dot={false}
+              activeDot={{ r: 4 }}
               connectNulls
             />
           </LineChart>
