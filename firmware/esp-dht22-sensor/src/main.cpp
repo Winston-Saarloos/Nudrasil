@@ -165,6 +165,6 @@ void loop() {
     debug("Moisture: " + String(moisture));
     debug("Light Raw: " + String(lightRaw) + " | Brightness: " + String(light) + "%");
 
-    postSensorData(tempC, hum, moisture, light);
+    postSensorData(tempC, hum, moisture, lightRaw);
   }
 }
