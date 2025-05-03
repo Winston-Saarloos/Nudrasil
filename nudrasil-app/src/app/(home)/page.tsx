@@ -56,6 +56,15 @@ interface ChartPoint {
   temp?: number;
   humidity?: number;
   soil?: number;
+  light?: number;
+}
+
+function calculateLightPercent(rawValue: number): number {
+  const min = 20000; // darkest
+  const max = 200; // brightest (max of ADS1115)
+  const clamped = Math.max(Math.min(rawValue, max), min);
+  const percent = (clamped / max) * 100;
+  return Math.round(percent);
 }
 
 function calculateMoisturePercent(rawValue: number): number {
@@ -95,22 +104,24 @@ export default function SensorPage() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        const [tempRes, humidityRes, soilRes] = await Promise.all([
+        const [tempRes, humidityRes, soilRes, lightRes] = await Promise.all([
           fetch("/api/sensor?sensorId=1"),
           fetch("/api/sensor?sensorId=2"),
           fetch("/api/sensor?sensorId=3"),
+          fetch("/api/sensor?sensorId=4"),
         ]);
 
         const tempJson: { data: SensorReading[] } = await tempRes.json();
         const humidityJson: { data: SensorReading[] } =
           await humidityRes.json();
         const soilJson: { data: SensorReading[] } = await soilRes.json();
+        const lightJson: { data: SensorReading[] } = await lightRes.json();
 
         const merged: Record<string, ChartPoint> = {};
 
         const mergeReading = (
           entry: SensorReading,
-          key: "temp" | "humidity" | "soil",
+          key: "temp" | "humidity" | "soil" | "light",
         ) => {
           const dt = DateTime.fromISO(entry.readingTime, { zone: "utc" })
             .toLocal()
@@ -131,12 +142,15 @@ export default function SensorPage() {
             merged[iso].humidity = entry.value;
           } else if (key === "soil") {
             merged[iso].soil = calculateMoisturePercent(entry.value);
+          } else if (key === "light") {
+            merged[iso].light = calculateLightPercent(entry.value);
           }
         };
 
         tempJson.data.forEach((r) => mergeReading(r, "temp"));
         humidityJson.data.forEach((r) => mergeReading(r, "humidity"));
         soilJson.data.forEach((r) => mergeReading(r, "soil"));
+        lightJson.data.forEach((r) => mergeReading(r, "light"));
 
         const sorted = Object.values(merged)
           .sort(
@@ -165,6 +179,9 @@ export default function SensorPage() {
   const latestSoil = [...chartData]
     .reverse()
     .find((data) => data.soil !== undefined);
+  const latestLight = [...chartData]
+    .reverse()
+    .find((data) => data.light !== undefined);
 
   return (
     <div className="p-6 space-y-4 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
@@ -258,6 +275,14 @@ export default function SensorPage() {
               dot={{ r: 3 }}
               connectNulls
             />
+            <Line
+              type="monotone"
+              dataKey="light"
+              stroke="#00c0ff"
+              name="Light (%)"
+              dot={{ r: 3 }}
+              connectNulls
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -287,6 +312,12 @@ export default function SensorPage() {
                 <span className={moistureColor(latestSoil.soil!)}>
                   {latestSoil.soil}% – {moistureDescription(latestSoil.soil!)}
                 </span>
+              </p>
+            )}
+            {latestLight && (
+              <p>
+                <span className="font-medium">Light Level:</span>{" "}
+                {latestLight.light}%
               </p>
             )}
           </div>
