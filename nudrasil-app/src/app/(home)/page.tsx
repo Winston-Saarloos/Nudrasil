@@ -59,8 +59,8 @@ interface ChartPoint {
 }
 
 function calculateMoisturePercent(rawValue: number): number {
-  const dry = 577;
-  const wet = 256;
+  const dry = 12000;
+  const wet = 4000;
   const clamped = Math.max(Math.min(rawValue, dry), wet);
   const percent = ((dry - clamped) / (dry - wet)) * 100;
   return Math.round(percent);
