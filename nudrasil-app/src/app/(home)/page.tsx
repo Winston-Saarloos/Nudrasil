@@ -60,10 +60,11 @@ interface ChartPoint {
 }
 
 function calculateLightPercent(rawValue: number): number {
-  const min = 20000; // darkest
-  const max = 200; // brightest (max of ADS1115)
-  const clamped = Math.max(Math.min(rawValue, max), min);
-  const percent = (clamped / max) * 100;
+  const dark = 20000; // very dark = high value
+  const bright = 200; // very bright = low value
+
+  const clamped = Math.max(Math.min(rawValue, dark), bright);
+  const percent = ((dark - clamped) / (dark - bright)) * 100;
   return Math.round(percent);
 }
 
