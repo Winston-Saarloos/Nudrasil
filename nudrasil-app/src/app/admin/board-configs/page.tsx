@@ -42,7 +42,9 @@ export default function DeviceConfigsAdminPage() {
   }, []);
 
   const attemptUnlock = async (value: string) => {
-    const res = await fetch(`/api/admin/device-configs?secret=${value}`);
+    const res = await fetch(`/api/admin/device-configs`, {
+      headers: { Authorization: secret },
+    });
     if (res.ok) {
       const data = await res.json();
       setConfigs(data);
@@ -92,9 +94,9 @@ export default function DeviceConfigsAdminPage() {
     }
 
     const parsed = JSON.parse(newConfig);
-    const res = await fetch(`/api/admin/device-configs?secret=${secret}`, {
+    const res = await fetch(`/api/admin/device-configs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: secret },
       body: JSON.stringify({
         deviceId: newDeviceId,
         config: parsed,
@@ -115,9 +117,9 @@ export default function DeviceConfigsAdminPage() {
     updatedConfig: Record<string, unknown>,
   ) => {
     try {
-      const res = await fetch(`/api/admin/device-configs?secret=${secret}`, {
+      const res = await fetch(`/api/admin/device-configs`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: secret },
         body: JSON.stringify({
           id,
           config: updatedConfig,
@@ -137,9 +139,9 @@ export default function DeviceConfigsAdminPage() {
   const deleteConfig = async (id: number) => {
     if (!confirm("Are you sure you want to delete this config?")) return;
 
-    const res = await fetch(`/api/admin/device-configs?secret=${secret}`, {
+    const res = await fetch(`/api/admin/device-configs`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: secret },
       body: JSON.stringify({ id }),
     });
 

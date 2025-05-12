@@ -190,7 +190,7 @@ export default function SensorPage() {
       <h3>{"sensor data + charts = <3"}</h3>
       <hr className="border-gray-300 dark:border-gray-700" />
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        Data is sent once a minute
+        Data is sent once every 10 minutes
       </p>
 
       {/* Temp/Humidity Chart */}

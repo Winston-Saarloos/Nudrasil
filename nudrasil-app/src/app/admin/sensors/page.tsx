@@ -222,9 +222,13 @@ export default function SensorsAdminPage() {
                   key={sensor.id}
                   className="border p-2 rounded flex justify-between items-center"
                 >
-                  <span>
-                    {sensor.name} ({sensor.location}) - Type {sensor.typeId}
-                  </span>
+                  <div>
+                    <div>{sensor.name}</div>
+                    <hr />
+                    <div>Board ID: {sensor.boardId}</div>
+                    <div>Location: {sensor.location}</div>
+                    <div>Type: {sensor.typeId}</div>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="secondary"
