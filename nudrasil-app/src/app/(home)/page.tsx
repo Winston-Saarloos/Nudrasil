@@ -59,15 +59,6 @@ interface ChartPoint {
   light?: number;
 }
 
-function calculateLightPercent(rawValue: number): number {
-  const dark = 20000; // very dark = high value
-  const bright = 200; // very bright = low value
-
-  const clamped = Math.max(Math.min(rawValue, dark), bright);
-  const percent = ((dark - clamped) / (dark - bright)) * 100;
-  return Math.round(percent);
-}
-
 function calculateMoisturePercent(rawValue: number): number {
   const dry = 12000;
   const wet = 4000;
@@ -144,7 +135,7 @@ export default function SensorPage() {
           } else if (key === "soil") {
             merged[iso].soil = calculateMoisturePercent(entry.value);
           } else if (key === "light") {
-            merged[iso].light = calculateLightPercent(entry.value);
+            merged[iso].light = entry.value;
           }
         };
 
@@ -260,17 +251,28 @@ export default function SensorPage() {
               }
             />
             <YAxis
+              yAxisId="left"
               stroke="currentColor"
               label={{
                 value: "Soil Moisture (%)",
                 angle: -90,
                 position: "insideLeft",
-                fill: "currentColor",
+              }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="currentColor"
+              label={{
+                value: "Light (lux)",
+                angle: -90,
+                position: "insideRight",
               }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line
+              yAxisId="left"
               type="monotone"
               dataKey="soil"
               stroke="#ffaa00"
@@ -280,10 +282,11 @@ export default function SensorPage() {
               connectNulls
             />
             <Line
+              yAxisId="right"
               type="monotone"
               dataKey="light"
               stroke="#00c0ff"
-              name="Light (%)"
+              name="Light (lux)"
               dot={false}
               activeDot={{ r: 4 }}
               connectNulls
@@ -322,7 +325,7 @@ export default function SensorPage() {
             {latestLight && (
               <p>
                 <span className="font-medium">Light Level:</span>{" "}
-                {latestLight.light}%
+                {latestLight.light} lux
               </p>
             )}
           </div>
