@@ -4,8 +4,12 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
+#include <Adafruit_TSL2561_U.h>
 #include "DHT.h"
 #include "secrets.h"
+
+// --- TSL2561 Setup ---
+Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 1);
 
 // --- Board Setup ---
 ESP8266WebServer server(80);
@@ -20,7 +24,7 @@ DHT dht(DHTPIN, DHTTYPE);
 const char* temperatureSensorName = "dht22-temp-001";
 const char* humiditySensorName = "dh22-humidity-001";
 const char* moistureSensorName = "soil-moisture-001";
-const char* lightSensorName = "light-sensor-001";
+const char* lightSensorName = "lux-sensor-001";
 
 // --- Config ---
 String serverIp = "";
@@ -28,7 +32,7 @@ int serverPort = 0;
 
 // --- Timers ---
 unsigned long lastSent = 0;
-const unsigned long sendInterval = (60 * 1000) * 10;
+const unsigned long sendInterval = (60 * 1000) * 10; //10
 unsigned long lastConnectivityCheck = 0;
 const unsigned long connectivityCheckInterval = 10000;
 
@@ -70,30 +74,54 @@ bool checkConnectivity() {
 
 // --- Fetch Config ---
 void fetchServerConfig() {
-  if (WiFi.status() != WL_CONNECTED) return;
-  HTTPClient http;
-  WiFiClient client;
-  String url = String(SERVER_URL) + CONFIG_PATH + "?secret=" + DEVICE_SECRET + "&deviceId=" + DEVICE_ID;
-  http.begin(client, url);
-  int code = http.GET();
-
-  if (code == 200) {
-    String payload = http.getString();
-    JsonDocument doc;
-    if (!deserializeJson(doc, payload)) {
-      JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
-      serverIp = env["ip"].as<String>();
-      serverPort = env["port"].as<int>();
-    }
+  if (WiFi.status() != WL_CONNECTED) {
+    debug("Not connected to WiFi, skipping config fetch");
+    return;
   }
 
+  HTTPClient http;
+  WiFiClient client;
+  String url = String(SERVER_URL) + CONFIG_PATH + "?deviceId=" + DEVICE_ID;
+  debug("Fetching config from: " + url);
+  http.begin(client, url);
+  http.addHeader("Authorization", DEVICE_SECRET);
+  
+  int code = http.GET();
+  String body = http.getString();
+  debug("Config fetch HTTP " + String(code) + ": " + body);
+  
+  if (code != 200) {
+    debug("Config fetch failed");
+    http.end();
+    return;
+  }
+  
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, body);
+  if (err) {
+    debug("Failed to parse config: " + String(err.c_str()));
+    http.end();
+    return;
+  }
+  
+  JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
+  serverIp = env["ip"].as<String>();
+  serverPort = env["port"].as<int>();
+  
+  debug("Parsed server config: " + serverIp + ":" + String(serverPort));
   http.end();
 }
 
 // --- POST Sensor Data ---
 void postSensorData(float tempC, float humidity, int moisture, int light) {
-  if (serverIp == "") return;
+  if (serverIp == "") {
+    debug("Cannot post: serverIp is empty");
+    return;
+  }
+
   String url = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
+  debug("POST target URL: " + url);
+
   WiFiClient client;
   HTTPClient http;
 
@@ -110,9 +138,20 @@ void postSensorData(float tempC, float humidity, int moisture, int light) {
   for (auto s : sensors) {
     http.begin(client, url);
     http.addHeader("Content-Type", "application/json");
+
     String payload = String("{\"sensor\":\"") + s.name + "\",\"value\":" + s.value + "}";
+    debug("Sending payload: " + payload);
+
     int status = http.POST(payload);
-    debug(String(s.name) + " POST: " + String(status));
+    debug("POST response code: " + String(status));
+
+    if (status > 0) {
+      String response = http.getString();
+      debug("POST response body: " + response);
+    } else {
+      debug("POST failed with error: " + http.errorToString(status));
+    }
+
     http.end();
   }
 }
@@ -122,15 +161,29 @@ void setup() {
   dht.begin();
   Wire.begin(D2, D1);  // SDA, SCL
   ads.begin();
+
+  // TSL2561 Init
+  if (!tsl.begin()) {
+    debug("TSL2561 not found");
+  } else {
+    tsl.enableAutoRange(true);
+    tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);
+    debug("TSL2561 initialized");
+  }
+
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+  debug("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     debugInline(".");
   }
+  debug(""); 
+  debug("WiFi connected successfully");
+  debug("ESP IP address: " + WiFi.localIP().toString());
 
   server.on("/health", HTTP_GET, []() { server.send(200, "text/plain", "healthy"); });
   server.begin();
@@ -139,32 +192,61 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  if (!checkConnectivity()) return;
+
+  if (!checkConnectivity()) {
+    debug("Connectivity check failed");
+    return;
+  }
 
   unsigned long now = millis();
   if (now - lastSent >= sendInterval) {
+    debug("Send interval reached");
+
     lastSent = now;
 
+    // --- Read DHT22 ---
+    debug("Reading DHT22");
+    yield();
     float tempC = dht.readTemperature();
     float hum = dht.readHumidity();
-    int moisture = ads.readADC_SingleEnded(0);
-    int lightRaw = ads.readADC_SingleEnded(1);
-
-    // Calibrate light (inverted range 200–20000)
-    int minLight = 20000;  // Dark
-    int maxLight = 200;    // Bright
-    int light = map(lightRaw, minLight, maxLight, 0, 100);
-    light = constrain(light, 0, 100);
+    yield();
 
     if (isnan(tempC) || isnan(hum)) {
-      debug("DHT read failed.");
+      debug("DHT22 read failed. Temp: " + String(tempC) + ", Humidity: " + String(hum));
       return;
     }
+    debug("DHT22 values: Temp = " + String(tempC) + " C, Humidity = " + String(hum) + " %");
 
-    debug("Readings => Temp: " + String(tempC) + "C, Humidity: " + String(hum) + "%");
-    debug("Moisture: " + String(moisture));
-    debug("Light Raw: " + String(lightRaw) + " | Brightness: " + String(light) + "%");
+    // --- Read soil moisture ---
+    debug("Reading soil moisture from ADS1115 A0");
+    yield();
+    int moisture = 0;
+    // Optional: re-init ADS to be safe if it ever fails
+    if (ads.begin()) {
+      moisture = ads.readADC_SingleEnded(0);
+      debug("Soil moisture raw value: " + String(moisture));
+    } else {
+      debug("ADS1115 not initialized or failed");
+    }
+    yield();
 
-    postSensorData(tempC, hum, moisture, lightRaw);
+    // --- Read TSL2561 ---
+    debug("Reading light from TSL2561");
+    yield();
+    sensors_event_t event;
+    int light = -1;
+    tsl.getEvent(&event);
+    yield();
+
+    if (event.light) {
+      light = static_cast<int>(event.light);
+      debug("TSL2561 lux: " + String(light));
+    } else {
+      debug("TSL2561 read failed or sensor saturated");
+    }
+
+    // --- Send data ---
+    postSensorData(tempC, hum, moisture, light);
+    debug("Sensor data posted successfully");
   }
 }
