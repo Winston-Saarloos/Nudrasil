@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
         location: sensors.location,
         typeId: sensors.typeId,
         boardId: sensors.boardId,
+        minCalibratedValue: sensors.minCalibratedValue,
+        maxCalibratedValue: sensors.maxCalibratedValue,
       })
       .from(sensors);
 
@@ -29,13 +31,22 @@ export async function POST(req: NextRequest) {
   try {
     await verifyAdminSecret(req);
 
-    const { name, location, typeId, boardId } = await req.json();
+    const {
+      name,
+      location,
+      typeId,
+      boardId,
+      minCalibratedValue,
+      maxCalibratedValue,
+    } = await req.json();
 
     await db.insert(sensors).values({
       name,
       location,
       typeId,
       boardId: boardId || null,
+      minCalibratedValue: minCalibratedValue ?? null,
+      maxCalibratedValue: maxCalibratedValue ?? null,
     });
 
     return NextResponse.json({ success: true });
@@ -63,7 +74,15 @@ export async function PATCH(req: NextRequest) {
     await verifyAdminSecret(req);
 
     const body = await req.json();
-    const { id, name, location, typeId, boardId } = body;
+    const {
+      id,
+      name,
+      location,
+      typeId,
+      boardId,
+      minCalibratedValue,
+      maxCalibratedValue,
+    } = body;
 
     if (!id || typeof id !== "number") {
       return NextResponse.json({ error: "Invalid sensor id" }, { status: 400 });
@@ -75,7 +94,9 @@ export async function PATCH(req: NextRequest) {
         name,
         location,
         typeId,
-        boardId: boardId || null, // allow setting boardId null
+        boardId: boardId || null,
+        minCalibratedValue: minCalibratedValue ?? null,
+        maxCalibratedValue: maxCalibratedValue ?? null,
       })
       .where(eq(sensors.id, id));
 

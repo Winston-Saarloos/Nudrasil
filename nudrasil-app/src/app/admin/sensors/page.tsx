@@ -26,6 +26,8 @@ interface Sensor {
   location: string;
   typeId: number;
   boardId: number | null;
+  minCalibratedValue?: number | null;
+  maxCalibratedValue?: number | null;
 }
 
 interface NewSensorInput {
@@ -33,6 +35,8 @@ interface NewSensorInput {
   typeId: string;
   location: string;
   boardId: string;
+  minCalibratedValue?: string;
+  maxCalibratedValue?: string;
 }
 
 export default function SensorsAdminPage() {
@@ -94,6 +98,12 @@ export default function SensorsAdminPage() {
       body: JSON.stringify({
         id: editingSensorId,
         ...newSensor,
+        minCalibratedValue: newSensor.minCalibratedValue
+          ? parseFloat(newSensor.minCalibratedValue)
+          : null,
+        maxCalibratedValue: newSensor.maxCalibratedValue
+          ? parseFloat(newSensor.maxCalibratedValue)
+          : null,
       }),
     });
 
@@ -121,6 +131,8 @@ export default function SensorsAdminPage() {
       location: sensor.location,
       typeId: sensor.typeId.toString(),
       boardId: sensor.boardId?.toString() ?? "",
+      minCalibratedValue: sensor.minCalibratedValue?.toString() ?? "",
+      maxCalibratedValue: sensor.maxCalibratedValue?.toString() ?? "",
     });
   }
 
@@ -163,6 +175,33 @@ export default function SensorsAdminPage() {
                 setNewSensor({ ...newSensor, location: e.target.value })
               }
               placeholder="Sensor Location"
+              className="border p-2 rounded"
+            />
+            <input
+              type="number"
+              step="any"
+              placeholder="Min Calibrated Value"
+              value={newSensor.minCalibratedValue ?? ""}
+              onChange={(e) =>
+                setNewSensor({
+                  ...newSensor,
+                  minCalibratedValue: e.target.value,
+                })
+              }
+              className="border p-2 rounded"
+            />
+
+            <input
+              type="number"
+              step="any"
+              placeholder="Max Calibrated Value"
+              value={newSensor.maxCalibratedValue ?? ""}
+              onChange={(e) =>
+                setNewSensor({
+                  ...newSensor,
+                  maxCalibratedValue: e.target.value,
+                })
+              }
               className="border p-2 rounded"
             />
             <Select
@@ -226,8 +265,12 @@ export default function SensorsAdminPage() {
                     <div>{sensor.name}</div>
                     <hr />
                     <div>Board ID: {sensor.boardId}</div>
-                    <div>Location: {sensor.location}</div>
+                    <div>
+                      Calibrated Range: {sensor.minCalibratedValue ?? "??"} to{" "}
+                      {sensor.maxCalibratedValue ?? "??"}
+                    </div>
                     <div>Type: {sensor.typeId}</div>
+                    <div>Location: {sensor.location}</div>
                   </div>
                   <div className="flex gap-2">
                     <Button
