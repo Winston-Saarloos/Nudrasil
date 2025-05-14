@@ -49,6 +49,8 @@ export const sensors = pgTable("sensors", {
   boardId: integer("board_id").references(() => boards.id, {
     onDelete: "set null",
   }),
+  minCalibratedValue: doublePrecision("min_calibrated_value"),
+  maxCalibratedValue: doublePrecision("max_calibrated_value"),
   createdAt: timestamp("created_at", {
     mode: "string",
     withTimezone: true,

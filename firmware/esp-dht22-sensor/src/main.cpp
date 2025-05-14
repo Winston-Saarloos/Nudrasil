@@ -23,8 +23,12 @@ DHT dht(DHTPIN, DHTTYPE);
 // --- Sensor Identifiers ---
 const char* temperatureSensorName = "dht22-temp-001";
 const char* humiditySensorName = "dh22-humidity-001";
-const char* moistureSensorName = "soil-moisture-001";
 const char* lightSensorName = "lux-sensor-001";
+
+// Soil Sensors
+const char* moistureSensor1Name = "soil-moisture-001";
+const char* moistureSensor2Name = "soil-moisture-002";
+const char* moistureSensor3Name = "soil-moisture-003";
 
 // --- Config ---
 String serverIp = "";
@@ -32,12 +36,12 @@ int serverPort = 0;
 
 // --- Timers ---
 unsigned long lastSent = 0;
-const unsigned long sendInterval = (60 * 1000) * 10; //10
+const unsigned long sendInterval = (60 * 1000) * 1; //10
 unsigned long lastConnectivityCheck = 0;
 const unsigned long connectivityCheckInterval = 10000;
 
 // --- Debug Mode ---
-const bool debugMode = false;
+const bool debugMode = true;
 template <typename T> void debug(const T& msg) { if (debugMode) Serial.println(msg); }
 template <typename T> void debugInline(const T& msg) { if (debugMode) Serial.print(msg); }
 
@@ -113,7 +117,7 @@ void fetchServerConfig() {
 }
 
 // --- POST Sensor Data ---
-void postSensorData(float tempC, float humidity, int moisture, int light) {
+void postSensorData(float tempC, float humidity, int moisture1, int moisture2, int moisture3, int light) {
   if (serverIp == "") {
     debug("Cannot post: serverIp is empty");
     return;
@@ -131,7 +135,9 @@ void postSensorData(float tempC, float humidity, int moisture, int light) {
   } sensors[] = {
     { temperatureSensorName, tempC },
     { humiditySensorName, humidity },
-    { moistureSensorName, static_cast<float>(moisture) },
+    { moistureSensor1Name, static_cast<float>(moisture1) },
+    { moistureSensor2Name, static_cast<float>(moisture2) },
+    { moistureSensor3Name, static_cast<float>(moisture3) },
     { lightSensorName, static_cast<float>(light) }
   };
 
@@ -218,13 +224,18 @@ void loop() {
     debug("DHT22 values: Temp = " + String(tempC) + " C, Humidity = " + String(hum) + " %");
 
     // --- Read soil moisture ---
-    debug("Reading soil moisture from ADS1115 A0");
+    debug("Reading soil moisture from ADS1115 A0, A1, A2");
     yield();
-    int moisture = 0;
-    // Optional: re-init ADS to be safe if it ever fails
+    
+    int moisture1 = 0, moisture2 = 0, moisture3 = 0;
+    
     if (ads.begin()) {
-      moisture = ads.readADC_SingleEnded(0);
-      debug("Soil moisture raw value: " + String(moisture));
+      moisture1 = ads.readADC_SingleEnded(0);
+      moisture2 = ads.readADC_SingleEnded(1);
+      moisture3 = ads.readADC_SingleEnded(2);
+      debug("Moisture A0: " + String(moisture1));
+      debug("Moisture A1: " + String(moisture2));
+      debug("Moisture A2: " + String(moisture3));
     } else {
       debug("ADS1115 not initialized or failed");
     }
@@ -246,7 +257,7 @@ void loop() {
     }
 
     // --- Send data ---
-    postSensorData(tempC, hum, moisture, light);
+    postSensorData(tempC, hum, moisture1, moisture2, moisture3, light);
     debug("Sensor data posted successfully");
   }
 }

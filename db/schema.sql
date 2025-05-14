@@ -44,6 +44,8 @@ CREATE TABLE sensors (
   type_id INTEGER NOT NULL REFERENCES sensor_types(id) ON DELETE RESTRICT,
   location TEXT NOT NULL,
   board_id INTEGER REFERENCES boards(id) ON DELETE SET NULL,
+  min_calibrated_value DOUBLE PRECISION,
+  max_calibrated_value DOUBLE PRECISION,
   created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
   updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
