@@ -2,6 +2,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
 #include <Adafruit_TSL2561_U.h>
@@ -36,12 +37,12 @@ int serverPort = 0;
 
 // --- Timers ---
 unsigned long lastSent = 0;
-const unsigned long sendInterval = (60 * 1000) * 1; //10
+const unsigned long sendInterval = (60 * 1000) * 10;
 unsigned long lastConnectivityCheck = 0;
 const unsigned long connectivityCheckInterval = 10000;
 
 // --- Debug Mode ---
-const bool debugMode = true;
+const bool debugMode = false;
 template <typename T> void debug(const T& msg) { if (debugMode) Serial.println(msg); }
 template <typename T> void debugInline(const T& msg) { if (debugMode) Serial.print(msg); }
 
@@ -162,10 +163,65 @@ void postSensorData(float tempC, float humidity, int moisture1, int moisture2, i
   }
 }
 
+// --- Sensor Cycle ---
+void runSensorCycle() {
+  debug("Send interval reached");
+
+  // --- Read DHT22 ---
+  debug("Reading DHT22");
+  yield();
+  float tempC = dht.readTemperature();
+  float hum = dht.readHumidity();
+  yield();
+
+  if (isnan(tempC) || isnan(hum)) {
+    debug("DHT22 read failed. Temp: " + String(tempC) + ", Humidity: " + String(hum));
+    return;
+  }
+
+  debug("DHT22 values: Temp = " + String(tempC) + " C, Humidity = " + String(hum) + " %");
+
+  // --- Read soil moisture ---
+  debug("Reading soil moisture from ADS1115 A0, A1, A2");
+  yield();
+
+  int moisture1 = 0, moisture2 = 0, moisture3 = 0;
+
+  if (ads.begin()) {
+    moisture1 = ads.readADC_SingleEnded(0);
+    moisture2 = ads.readADC_SingleEnded(1);
+    moisture3 = ads.readADC_SingleEnded(2);
+    debug("Moisture A0: " + String(moisture1));
+    debug("Moisture A1: " + String(moisture2));
+    debug("Moisture A2: " + String(moisture3));
+  } else {
+    debug("ADS1115 not initialized or failed");
+  }
+  yield();
+
+  // --- Read TSL2561 ---
+  debug("Reading light from TSL2561");
+  yield();
+  sensors_event_t event;
+  int light = -1;
+  tsl.getEvent(&event);
+  yield();
+
+  if (event.light) {
+    light = static_cast<int>(event.light);
+    debug("TSL2561 lux: " + String(light));
+  } else {
+    debug("TSL2561 read failed or sensor saturated");
+  }
+
+  postSensorData(tempC, hum, moisture1, moisture2, moisture3, light);
+  debug("Sensor data posted successfully");
+}
+
 void setup() {
   Serial.begin(115200);
   dht.begin();
-  Wire.begin(D2, D1);  // SDA, SCL
+  Wire.begin(D2, D1);
   ads.begin();
 
   // TSL2561 Init
@@ -187,77 +243,37 @@ void setup() {
     delay(500);
     debugInline(".");
   }
-  debug(""); 
+  debug("");
   debug("WiFi connected successfully");
   debug("ESP IP address: " + WiFi.localIP().toString());
 
   server.on("/health", HTTP_GET, []() { server.send(200, "text/plain", "healthy"); });
   server.begin();
   fetchServerConfig();
+
+  // --- OTA Setup ---
+  ArduinoOTA.setHostname("nodemcu");
+  ArduinoOTA.onStart([]() { debug("OTA Update Start"); });
+  ArduinoOTA.onEnd([]() { debug("OTA Update Complete"); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    debug("OTA Progress: " + String((progress * 100) / total) + "%");
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    debug("OTA Error [" + String(error) + "]");
+  });
+  ArduinoOTA.begin();
+  debug("OTA Ready");
 }
 
 void loop() {
+  ArduinoOTA.handle();
   server.handleClient();
 
-  if (!checkConnectivity()) {
-    debug("Connectivity check failed");
-    return;
-  }
-
-  unsigned long now = millis();
-  if (now - lastSent >= sendInterval) {
-    debug("Send interval reached");
-
-    lastSent = now;
-
-    // --- Read DHT22 ---
-    debug("Reading DHT22");
-    yield();
-    float tempC = dht.readTemperature();
-    float hum = dht.readHumidity();
-    yield();
-
-    if (isnan(tempC) || isnan(hum)) {
-      debug("DHT22 read failed. Temp: " + String(tempC) + ", Humidity: " + String(hum));
-      return;
+  if (checkConnectivity()) {
+    unsigned long now = millis();
+    if (now - lastSent >= sendInterval) {
+      lastSent = now;
+      runSensorCycle();
     }
-    debug("DHT22 values: Temp = " + String(tempC) + " C, Humidity = " + String(hum) + " %");
-
-    // --- Read soil moisture ---
-    debug("Reading soil moisture from ADS1115 A0, A1, A2");
-    yield();
-    
-    int moisture1 = 0, moisture2 = 0, moisture3 = 0;
-    
-    if (ads.begin()) {
-      moisture1 = ads.readADC_SingleEnded(0);
-      moisture2 = ads.readADC_SingleEnded(1);
-      moisture3 = ads.readADC_SingleEnded(2);
-      debug("Moisture A0: " + String(moisture1));
-      debug("Moisture A1: " + String(moisture2));
-      debug("Moisture A2: " + String(moisture3));
-    } else {
-      debug("ADS1115 not initialized or failed");
-    }
-    yield();
-
-    // --- Read TSL2561 ---
-    debug("Reading light from TSL2561");
-    yield();
-    sensors_event_t event;
-    int light = -1;
-    tsl.getEvent(&event);
-    yield();
-
-    if (event.light) {
-      light = static_cast<int>(event.light);
-      debug("TSL2561 lux: " + String(light));
-    } else {
-      debug("TSL2561 read failed or sensor saturated");
-    }
-
-    // --- Send data ---
-    postSensorData(tempC, hum, moisture1, moisture2, moisture3, light);
-    debug("Sensor data posted successfully");
   }
 }
