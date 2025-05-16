@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sensors, sensorReadings, boards } from "@root/drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, not } from "drizzle-orm";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "0.0.0.0";
 
-    // 1. Find sensor by name
+    // Find sensor by name
     const sensorResult = await db
       .select({ id: sensors.id, boardId: sensors.boardId })
       .from(sensors)
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const sensorId = sensorResult[0].id;
     const boardId = sensorResult[0].boardId;
 
-    // 2. Insert new reading
+    // Insert new reading
     await db.insert(sensorReadings).values({
       sensorId: sensorId,
       value: body.value,
@@ -46,6 +46,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     if (boardId) {
+      // Clear the IP from any other board that has it
+      await db
+        .update(boards)
+        .set({ lastKnownIp: null })
+        .where(and(eq(boards.lastKnownIp, ip), not(eq(boards.id, boardId))));
+
+      // Set the IP on the current board
       await db
         .update(boards)
         .set({ lastKnownIp: ip })
