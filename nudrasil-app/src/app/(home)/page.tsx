@@ -50,14 +50,30 @@ interface BoardStatus {
   latencyMs: number | null;
 }
 
+interface CalibrationData {
+  min: number;
+  max: number;
+}
+
 interface ChartPoint {
-  time: string;
   timestamp: string;
+  time: string;
   temp?: number;
   humidity?: number;
-  soil?: number;
   light?: number;
+  soil1?: number;
+  soil2?: number;
+  soil3?: number;
 }
+
+type NumericKeys = Exclude<
+  {
+    [K in keyof ChartPoint]: ChartPoint[K] extends number | undefined
+      ? K
+      : never;
+  }[keyof ChartPoint],
+  undefined
+>;
 
 function calculateMoisturePercent(
   rawValue: number,
@@ -67,18 +83,6 @@ function calculateMoisturePercent(
   const clamped = Math.max(Math.min(rawValue, soilMax), soilMin);
   const percent = ((soilMax - clamped) / (soilMax - soilMin)) * 100;
   return Math.round(percent);
-}
-
-function moistureDescription(percent: number): string {
-  if (percent >= 75) return "Wet";
-  if (percent >= 40) return "Moist";
-  return "Dry";
-}
-
-function moistureColor(percent: number): string {
-  if (percent >= 75) return "text-green-600";
-  if (percent >= 40) return "text-yellow-600";
-  return "text-red-600";
 }
 
 export default function SensorPage() {
@@ -98,33 +102,56 @@ export default function SensorPage() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        const [tempRes, humidityRes, soilRes1, soilCalRes1, lightRes] =
-          await Promise.all([
-            fetch("/api/sensor?sensorId=1"),
-            fetch("/api/sensor?sensorId=2"),
-            fetch("/api/sensor?sensorId=3"),
-            fetch("/api/sensor/calibration?sensorId=3"),
-            fetch("/api/sensor?sensorId=4"),
-          ]);
+        const [
+          tempRes,
+          humidityRes,
+          lightRes,
+          soil1Res,
+          soil2Res,
+          soil3Res,
+          cal1Res,
+          cal2Res,
+          cal3Res,
+        ] = await Promise.all([
+          fetch("/api/sensor?sensorId=1"),
+          fetch("/api/sensor?sensorId=2"),
+          fetch("/api/sensor?sensorId=4"),
+          fetch("/api/sensor?sensorId=3"),
+          fetch("/api/sensor?sensorId=9"),
+          fetch("/api/sensor?sensorId=10"),
+          fetch("/api/sensor/calibration?sensorId=3"),
+          fetch("/api/sensor/calibration?sensorId=9"),
+          fetch("/api/sensor/calibration?sensorId=10"),
+        ]);
 
-        const tempJson: { data: SensorReading[] } = await tempRes.json();
-        const humidityJson: { data: SensorReading[] } =
-          await humidityRes.json();
+        const [
+          tempJson,
+          humidityJson,
+          lightJson,
+          soil1Json,
+          soil2Json,
+          soil3Json,
+        ] = await Promise.all([
+          tempRes.json(),
+          humidityRes.json(),
+          lightRes.json(),
+          soil1Res.json(),
+          soil2Res.json(),
+          soil3Res.json(),
+        ]);
 
-        const soil1Json: { data: SensorReading[] } = await soilRes1.json();
-        const soilCal1Json: { data: { min: number; max: number } } =
-          await soilCalRes1.json();
-
-        const soil1Min = soilCal1Json.data.min;
-        const soil1Max = soilCal1Json.data.max;
-
-        const lightJson: { data: SensorReading[] } = await lightRes.json();
+        const [cal1, cal2, cal3]: CalibrationData[] = await Promise.all([
+          cal1Res.json().then((r) => r.data),
+          cal2Res.json().then((r) => r.data),
+          cal3Res.json().then((r) => r.data),
+        ]);
 
         const merged: Record<string, ChartPoint> = {};
 
-        const mergeReading = (
+        const merge = (
           entry: SensorReading,
-          key: "temp" | "humidity" | "soil" | "light",
+          key: NumericKeys,
+          convert?: (v: number) => number,
         ) => {
           const dt = DateTime.fromISO(entry.readingTime, { zone: "utc" })
             .toLocal()
@@ -133,40 +160,39 @@ export default function SensorPage() {
           if (!iso) return;
 
           if (!merged[iso]) {
-            merged[iso] = {
-              time: dt.toFormat("hh:mm a"),
-              timestamp: iso,
-            };
+            merged[iso] = { time: dt.toFormat("hh:mm a"), timestamp: iso };
           }
 
-          if (key === "temp") {
-            merged[iso].temp = (entry.value * 9) / 5 + 32;
-          } else if (key === "humidity") {
-            merged[iso].humidity = entry.value;
-          } else if (key === "soil") {
-            merged[iso].soil = merged[iso].soil = calculateMoisturePercent(
-              entry.value,
-              soil1Min,
-              soil1Max,
-            );
-          } else if (key === "light") {
-            merged[iso].light = entry.value;
-          }
+          merged[iso][key] = convert ? convert(entry.value) : entry.value;
         };
 
-        tempJson.data.forEach((r) => mergeReading(r, "temp"));
-        humidityJson.data.forEach((r) => mergeReading(r, "humidity"));
-        soil1Json.data.forEach((r) => mergeReading(r, "soil"));
-        lightJson.data.forEach((r) => mergeReading(r, "light"));
+        tempJson.data.forEach((r: SensorReading) =>
+          merge(r, "temp", (v) => (v * 9) / 5 + 32),
+        );
+        humidityJson.data.forEach((r: SensorReading) => merge(r, "humidity"));
+        lightJson.data.forEach((r: SensorReading) => merge(r, "light"));
+        soil1Json.data.forEach((r: SensorReading) =>
+          merge(r, "soil1", (v) =>
+            calculateMoisturePercent(v, cal1.min, cal1.max),
+          ),
+        );
+        soil2Json.data.forEach((r: SensorReading) =>
+          merge(r, "soil2", (v) =>
+            calculateMoisturePercent(v, cal2.min, cal2.max),
+          ),
+        );
+        soil3Json.data.forEach((r: SensorReading) =>
+          merge(r, "soil3", (v) =>
+            calculateMoisturePercent(v, cal3.min, cal3.max),
+          ),
+        );
 
-        const sorted = Object.values(merged)
-          .sort(
+        setChartData(
+          Object.values(merged).sort(
             (a, b) =>
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-          )
-          .slice(-50);
-
-        setChartData(sorted);
+          ),
+        );
       } catch (err) {
         console.error("Failed to fetch sensor data:", err);
       }
@@ -177,175 +203,37 @@ export default function SensorPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const latestTemp = [...chartData]
-    .reverse()
-    .find((data) => data.temp !== undefined);
-  const latestHumidity = [...chartData]
-    .reverse()
-    .find((data) => data.humidity !== undefined);
-  const latestSoil = [...chartData]
-    .reverse()
-    .find((data) => data.soil !== undefined);
-  const latestLight = [...chartData]
-    .reverse()
-    .find((data) => data.light !== undefined);
-
   return (
-    <div className="p-6 space-y-4 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
+    <div className="p-6 space-y-8 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
       <h1 className="text-2xl font-bold">Sensor Dashboard</h1>
-      <h3>{"sensor data + charts = <3"}</h3>
-      <hr className="border-gray-300 dark:border-gray-700" />
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        Data is sent once every 10 minutes
+        Data updates every 10 minutes. Charts refresh every 30 seconds.
       </p>
 
-      {/* Temp/Humidity Chart */}
-      <div style={{ width: "100%", height: 300 }}>
-        <h2 className="text-1xl font-bold mb-4">
-          Ambient Temperature & Humidity
-        </h2>
-        <ResponsiveContainer>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis
-              dataKey="timestamp"
-              stroke="currentColor"
-              tickFormatter={(value) =>
-                DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
-              }
-            />
-            <YAxis
-              yAxisId="left"
-              stroke="currentColor"
-              label={{
-                value: "°F / %",
-                angle: -90,
-                position: "insideLeft",
-                fill: "currentColor",
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="temp"
-              stroke="#8884d8"
-              name="Temp (°F)"
-              dot={false}
-              activeDot={{ r: 4 }}
-              connectNulls
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="humidity"
-              stroke="#82ca9d"
-              name="Humidity (%)"
-              dot={false}
-              activeDot={{ r: 4 }}
-              connectNulls
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <Chart
+        title="Ambient Temperature & Humidity"
+        data={chartData}
+        lines={[
+          { key: "temp", color: "#8884d8", name: "Temp (°F)" },
+          { key: "humidity", color: "#82ca9d", name: "Humidity (%)" },
+        ]}
+      />
 
-      {/* Soil Moisture Chart */}
-      <div style={{ width: "100%", height: 300 }}>
-        <h2 className="text-1xl font-bold mb-4 mt-8">
-          Spider Plant 1 - Soil Moisture %
-        </h2>
-        <ResponsiveContainer>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis
-              dataKey="timestamp"
-              stroke="currentColor"
-              tickFormatter={(value) =>
-                DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
-              }
-            />
-            <YAxis
-              yAxisId="left"
-              stroke="currentColor"
-              label={{
-                value: "Soil Moisture (%)",
-                angle: -90,
-                position: "insideLeft",
-              }}
-            />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              stroke="currentColor"
-              label={{
-                value: "Light (lux)",
-                angle: -90,
-                position: "insideRight",
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="soil"
-              stroke="#ffaa00"
-              name="Soil Moisture (%)"
-              dot={false}
-              activeDot={{ r: 4 }}
-              connectNulls
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="light"
-              stroke="#00c0ff"
-              name="Light (lux)"
-              dot={false}
-              activeDot={{ r: 4 }}
-              connectNulls
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <Chart
+        title="Soil Moisture Sensors"
+        data={chartData}
+        lines={[
+          { key: "soil1", color: "#ffaa00", name: "Spider Plant 1" },
+          { key: "soil2", color: "#ff5588", name: "Spider Plant 2" },
+          { key: "soil3", color: "#55aaff", name: "Unknown Plant" },
+        ]}
+      />
 
-      {/* Latest Readings Summary */}
-      {(latestTemp || latestHumidity || latestSoil) && (
-        <div className="mt-16 p-4 rounded-md bg-zinc-100 dark:bg-zinc-800">
-          <h3 className="text-md font-semibold mb-2 text-zinc-700 dark:text-zinc-200">
-            Latest Readings
-          </h3>
-          <div className="text-sm space-y-1 text-zinc-800 dark:text-zinc-100">
-            {latestTemp && (
-              <p>
-                <span className="font-medium">Temperature:</span>{" "}
-                {latestTemp.temp?.toFixed(1)} °F
-              </p>
-            )}
-            {latestHumidity && (
-              <p>
-                <span className="font-medium">Humidity:</span>{" "}
-                {latestHumidity.humidity?.toFixed(1)}%
-              </p>
-            )}
-            {latestSoil && (
-              <p>
-                <span className="font-medium">Soil Moisture 1:</span>{" "}
-                <span className={moistureColor(latestSoil.soil!)}>
-                  {latestSoil.soil}% – {moistureDescription(latestSoil.soil!)}
-                </span>
-              </p>
-            )}
-            {latestLight && (
-              <p>
-                <span className="font-medium">Light Level:</span>{" "}
-                {latestLight.light} lux
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      <Chart
+        title="Ambient Lux"
+        data={chartData}
+        lines={[{ key: "light", color: "#00c0ff", name: "Light (lux)" }]}
+      />
 
       {/* Board Status */}
       <div className="p-4">
@@ -366,6 +254,49 @@ export default function SensorPage() {
           ))}
         </ul>
       </div>
+    </div>
+  );
+}
+
+function Chart({
+  title,
+  data,
+  lines,
+}: {
+  title: string;
+  data: ChartPoint[];
+  lines: { key: keyof ChartPoint; color: string; name: string }[];
+}) {
+  return (
+    <div style={{ width: "100%", height: 300 }}>
+      <h2 className="text-xl font-bold mb-4">{title}</h2>
+      <ResponsiveContainer>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+          <XAxis
+            dataKey="timestamp"
+            stroke="currentColor"
+            tickFormatter={(value) =>
+              DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
+            }
+          />
+          <YAxis stroke="currentColor" />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          {lines.map((line) => (
+            <Line
+              key={line.key as string}
+              type="monotone"
+              dataKey={line.key as string}
+              stroke={line.color}
+              name={line.name}
+              dot={false}
+              activeDot={{ r: 4 }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
