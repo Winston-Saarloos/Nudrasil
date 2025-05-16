@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
   TooltipProps,
+  Brush,
 } from "recharts";
 import { DateTime } from "luxon";
 
@@ -271,7 +272,7 @@ function Chart({
     <div style={{ width: "100%", height: 300 }}>
       <h2 className="text-xl font-bold mb-4">{title}</h2>
       <ResponsiveContainer>
-        <LineChart data={data}>
+        <LineChart data={data} syncId="shared">
           <CartesianGrid strokeDasharray="3 3" stroke="#444" />
           <XAxis
             dataKey="timestamp"
@@ -295,6 +296,15 @@ function Chart({
               connectNulls
             />
           ))}
+          <Brush
+            dataKey="timestamp"
+            height={30}
+            stroke="#8884d8"
+            fill="transparent"
+            tickFormatter={(value) =>
+              DateTime.fromISO(value).toLocal().toFormat("MM/dd hh:mm")
+            }
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
