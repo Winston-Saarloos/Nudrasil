@@ -59,11 +59,13 @@ interface ChartPoint {
   light?: number;
 }
 
-function calculateMoisturePercent(rawValue: number): number {
-  const dry = 12000;
-  const wet = 4000;
-  const clamped = Math.max(Math.min(rawValue, dry), wet);
-  const percent = ((dry - clamped) / (dry - wet)) * 100;
+function calculateMoisturePercent(
+  rawValue: number,
+  soilMin: number,
+  soilMax: number,
+): number {
+  const clamped = Math.max(Math.min(rawValue, soilMax), soilMin);
+  const percent = ((soilMax - clamped) / (soilMax - soilMin)) * 100;
   return Math.round(percent);
 }
 
@@ -96,17 +98,26 @@ export default function SensorPage() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        const [tempRes, humidityRes, soilRes, lightRes] = await Promise.all([
-          fetch("/api/sensor?sensorId=1"),
-          fetch("/api/sensor?sensorId=2"),
-          fetch("/api/sensor?sensorId=3"),
-          fetch("/api/sensor?sensorId=4"),
-        ]);
+        const [tempRes, humidityRes, soilRes1, soilCalRes1, lightRes] =
+          await Promise.all([
+            fetch("/api/sensor?sensorId=1"),
+            fetch("/api/sensor?sensorId=2"),
+            fetch("/api/sensor?sensorId=3"),
+            fetch("/api/sensor/calibration?sensorId=3"),
+            fetch("/api/sensor?sensorId=4"),
+          ]);
 
         const tempJson: { data: SensorReading[] } = await tempRes.json();
         const humidityJson: { data: SensorReading[] } =
           await humidityRes.json();
-        const soilJson: { data: SensorReading[] } = await soilRes.json();
+
+        const soil1Json: { data: SensorReading[] } = await soilRes1.json();
+        const soilCal1Json: { data: { min: number; max: number } } =
+          await soilCalRes1.json();
+
+        const soil1Min = soilCal1Json.data.min;
+        const soil1Max = soilCal1Json.data.max;
+
         const lightJson: { data: SensorReading[] } = await lightRes.json();
 
         const merged: Record<string, ChartPoint> = {};
@@ -133,7 +144,11 @@ export default function SensorPage() {
           } else if (key === "humidity") {
             merged[iso].humidity = entry.value;
           } else if (key === "soil") {
-            merged[iso].soil = calculateMoisturePercent(entry.value);
+            merged[iso].soil = merged[iso].soil = calculateMoisturePercent(
+              entry.value,
+              soil1Min,
+              soil1Max,
+            );
           } else if (key === "light") {
             merged[iso].light = entry.value;
           }
@@ -141,7 +156,7 @@ export default function SensorPage() {
 
         tempJson.data.forEach((r) => mergeReading(r, "temp"));
         humidityJson.data.forEach((r) => mergeReading(r, "humidity"));
-        soilJson.data.forEach((r) => mergeReading(r, "soil"));
+        soil1Json.data.forEach((r) => mergeReading(r, "soil"));
         lightJson.data.forEach((r) => mergeReading(r, "light"));
 
         const sorted = Object.values(merged)
@@ -316,7 +331,7 @@ export default function SensorPage() {
             )}
             {latestSoil && (
               <p>
-                <span className="font-medium">Soil Moisture:</span>{" "}
+                <span className="font-medium">Soil Moisture 1:</span>{" "}
                 <span className={moistureColor(latestSoil.soil!)}>
                   {latestSoil.soil}% – {moistureDescription(latestSoil.soil!)}
                 </span>
