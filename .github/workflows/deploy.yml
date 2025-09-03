@@ -60,7 +60,6 @@ jobs:
           registry: ${{ secrets.HARBOR_REGISTRY }}
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
-          insecure-registry: true
 
       - name: Extract metadata
         id: meta
@@ -99,7 +98,6 @@ jobs:
           registry: ${{ secrets.HARBOR_REGISTRY }}
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
-          insecure-registry: true
 
       - name: Stop and remove existing container
         run: |
