@@ -206,7 +206,7 @@ export default function SensorPage() {
 
   return (
     <div className="p-6 space-y-8 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
-      <h1 className="text-2xl font-bold">Sensor Dashboard</h1>
+      <h1 className="text-2xl font-bold">Sensor Dashboard v2</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Data updates every 10 minutes. Charts refresh every 30 seconds.
       </p>
