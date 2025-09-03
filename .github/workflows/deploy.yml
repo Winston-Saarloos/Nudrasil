@@ -86,6 +86,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            PG_HOST=${{ secrets.PG_HOST }}
+            PG_USER=${{ secrets.PG_USER }}
+            PG_PASSWORD=${{ secrets.PG_PASSWORD }}
+            PG_DATABASE=${{ secrets.PG_DATABASE }}
+            ADMIN_SENSOR_SECRET=${{ secrets.ADMIN_SENSOR_SECRET }}
 
       # Push with the host docker client so TLS trust applies
       - name: Push tags via host Docker
