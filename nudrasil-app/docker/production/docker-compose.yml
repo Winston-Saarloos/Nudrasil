@@ -1,17 +1,4 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: nudrasil-postgres-production
-    environment:
-      POSTGRES_DB: ${PG_DATABASE}
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-
   nudrasil-app:
     build:
       context: ../../
@@ -22,14 +9,8 @@ services:
     environment:
       - NODE_ENV=production
       - PG_HOST=${PG_HOST}
-      - PG_PORT=5432
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - PG_DATABASE=${PG_DATABASE}
       - ADMIN_SENSOR_SECRET=${ADMIN_SENSOR_SECRET}
-    depends_on:
-      - postgres
     restart: unless-stopped
-
-volumes:
-  postgres_data:
