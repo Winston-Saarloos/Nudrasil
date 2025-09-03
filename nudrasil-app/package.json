@@ -10,7 +10,15 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "docker:build": "docker build -t nudrasil-app:local -f docker/production/Dockerfile .",
+    "docker:build:dev": "docker build -t nudrasil-app:dev --target builder -f docker/production/Dockerfile .",
+    "docker:run": "docker run -d --name nudrasil-app-local --rm -p 3001:3000 -e NODE_ENV=production nudrasil-app:local",
+    "docker:stop": "docker stop nudrasil-app-local || true",
+    "docker:clean": "docker rmi nudrasil-app:local || true",
+    "docker:compose:up": "docker-compose -f docker/production/docker-compose.yml up -d",
+    "docker:compose:down": "docker-compose -f docker/production/docker-compose.yml down",
+    "docker:compose:test": "docker-compose -f docker/production/docker-compose.yml down && docker-compose -f docker/docker-compose.yml up -d --build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.11",
@@ -46,5 +54,5 @@
     "tailwindcss": "^4.1.4",
     "typescript": "^5"
   },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.9.4"
 }

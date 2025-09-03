@@ -1,0 +1,11 @@
+services:
+  nudrasil-app:
+    build:
+      context: ../../
+      dockerfile: docker/production/Dockerfile
+    container_name: nudrasil-app-production
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
