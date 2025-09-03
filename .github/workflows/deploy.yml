@@ -118,7 +118,7 @@ jobs:
           docker run -d \
             --name nudrasil-app-docker \
             --restart unless-stopped \
-            -p 3000:3000 \
+            --network host \
             -e NODE_ENV=production \
             ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
 
