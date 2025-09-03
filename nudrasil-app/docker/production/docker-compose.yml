@@ -4,8 +4,7 @@ services:
       context: ../../
       dockerfile: docker/production/Dockerfile
     container_name: nudrasil-app-production
-    ports:
-      - "3000:3000"
+    network_mode: "host"
     environment:
       - NODE_ENV=production
       - PG_HOST=${PG_HOST}
