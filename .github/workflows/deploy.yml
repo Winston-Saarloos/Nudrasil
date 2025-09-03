@@ -109,11 +109,10 @@ jobs:
           # Pull the latest image
           docker pull ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
 
-          # Run the new container on port 3001 for testing
           docker run -d \
             --name nudrasil-app-docker \
             --restart unless-stopped \
-            -p 3001:3000 \
+            -p 3000:3000 \
             -e NODE_ENV=production \
             ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
 
@@ -121,7 +120,7 @@ jobs:
           sleep 10
 
           # Health check
-          curl -f http://localhost:3001/api/probe || exit 1
+          curl -f http://localhost:3000/api/probe || exit 1
 
-          echo "Docker container deployed successfully on port 3001"
-          echo "Access your app at: http://localhost:3001"
+          echo "Docker container deployed successfully on port 3000"
+          echo "Access your app at: http://localhost:3000"

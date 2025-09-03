@@ -13,7 +13,7 @@
     "db:studio": "drizzle-kit studio",
     "docker:build": "docker build -t nudrasil-app:local -f docker/production/Dockerfile .",
     "docker:build:dev": "docker build -t nudrasil-app:dev --target builder -f docker/production/Dockerfile .",
-    "docker:run": "docker run -d --name nudrasil-app-local --rm -p 3001:3000 -e NODE_ENV=production nudrasil-app:local",
+    "docker:run": "docker run -d --name nudrasil-app-local --rm -p 3000:3000 -e NODE_ENV=production nudrasil-app:local",
     "docker:stop": "docker stop nudrasil-app-local || true",
     "docker:clean": "docker rmi nudrasil-app:local || true",
     "docker:compose:up": "docker-compose -f docker/production/docker-compose.yml up -d",
