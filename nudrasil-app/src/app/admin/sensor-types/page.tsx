@@ -90,20 +90,22 @@ export default function SensorTypesAdminPage() {
           </div>
 
           <ul className="space-y-2">
-            {sensorTypes.map((type) => (
-              <li
-                key={type.id}
-                className="border p-2 rounded flex justify-between"
-              >
-                {type.name}
-                <Button
-                  variant="destructive"
-                  onClick={() => deleteType(type.id)}
+            {sensorTypes &&
+              sensorTypes.length > 0 &&
+              sensorTypes.map((type) => (
+                <li
+                  key={type.id}
+                  className="border p-2 rounded flex justify-between"
                 >
-                  Delete
-                </Button>
-              </li>
-            ))}
+                  {type.name}
+                  <Button
+                    variant="destructive"
+                    onClick={() => deleteType(type.id)}
+                  >
+                    Delete
+                  </Button>
+                </li>
+              ))}
           </ul>
         </>
       )}
