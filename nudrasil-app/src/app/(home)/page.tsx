@@ -177,6 +177,8 @@ export default function SensorPage() {
     latencyMs: board.latencyMs,
   }));
 
+  const margin = { top: 25, right: 0, left: 0, bottom: 0 };
+
   return (
     <div className="p-6 space-y-8 bg-zinc-900 text-white rounded-xl shadow">
       <h1 className="text-2xl font-bold">Sensor Dashboard v2</h1>
@@ -203,6 +205,7 @@ export default function SensorPage() {
           },
         ]}
         height={350}
+        margin={margin}
       />
 
       <SensorChart
@@ -230,6 +233,7 @@ export default function SensorPage() {
           },
         ]}
         height={350}
+        margin={margin}
       />
 
       <SensorChart
@@ -245,6 +249,7 @@ export default function SensorPage() {
           },
         ]}
         height={300}
+        margin={margin}
       />
 
       {/* Board Status */}

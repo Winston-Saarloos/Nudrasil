@@ -7,6 +7,7 @@ export function SensorChart({
   lines,
   height = 300,
   className,
+  margin,
 }: Omit<ChartConfig, "type" | "showGrid" | "showBrush" | "showLegend">) {
   return (
     <Chart
@@ -20,6 +21,7 @@ export function SensorChart({
       showBrush={true}
       showLegend={true}
       className={className}
+      margin={margin}
     />
   );
 }

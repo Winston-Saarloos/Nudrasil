@@ -18,6 +18,7 @@ import {
 import { DateTime } from "luxon";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { cn } from "@/lib/utils";
+import { DayBoundaryIndicator } from "@/components/DayBoundryIndicator";
 
 export type ChartType = "line" | "area" | "bar";
 
@@ -41,8 +42,9 @@ export interface ChartConfig {
   showLegend?: boolean;
   className?: string;
   yAxisDomain?: [number, number];
-  xAxisTickFormatter?: (value: any) => string;
+  xAxisTickFormatter?: (value: any, index?: number) => string;
   yAxisTickFormatter?: (value: any) => string;
+  margin?: { top: number; right: number; left: number; bottom: number };
 }
 
 const CustomTooltip = ({
@@ -96,14 +98,24 @@ export function Chart({
   showLegend = true,
   className,
   yAxisDomain,
-  xAxisTickFormatter = (value) =>
-    DateTime.fromISO(value).toLocal().toFormat("hh:mm a"),
+  xAxisTickFormatter = (value, index) => {
+    const totalTicks = data.length;
+    const labelInterval = Math.max(1, Math.floor(totalTicks / 12));
+
+    if (index !== undefined && index % labelInterval === 0) {
+      const dt = DateTime.fromISO(value);
+      return dt.toLocal().toFormat("hh:mm a");
+    }
+    return "";
+  },
   yAxisTickFormatter = (value) => value.toString(),
+  margin,
 }: ChartConfig) {
   const renderChart = () => {
     const commonProps = {
       data,
       syncId: "shared",
+      margin,
     };
 
     const gridProps = showGrid
@@ -111,6 +123,7 @@ export function Chart({
           strokeDasharray: "3 3",
           stroke: "#4b5563", // zinc-600
           opacity: 0.6,
+          vertical: false,
         }
       : {};
 
@@ -164,6 +177,7 @@ export function Chart({
               />
             ))}
             {showBrush && <Brush {...brushProps} />}
+            <DayBoundaryIndicator data={data} />
           </AreaChart>
         );
 
@@ -226,6 +240,7 @@ export function Chart({
               />
             ))}
             {showBrush && <Brush {...brushProps} />}
+            <DayBoundaryIndicator data={data} />
           </LineChart>
         );
     }
