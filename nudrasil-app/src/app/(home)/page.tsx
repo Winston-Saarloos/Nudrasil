@@ -1,49 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Brush,
-} from "recharts";
 import { DateTime } from "luxon";
-
-const CustomTooltip = ({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-  }>;
-  label?: string;
-}) => {
-  if (active && payload && payload.length) {
-    const localTime = DateTime.fromISO(label || "")
-      .toLocal()
-      .toFormat("MM/dd hh:mm a");
-
-    return (
-      <div className="bg-zinc-800 text-white p-3 rounded shadow text-sm">
-        <p className="font-semibold">{localTime}</p>
-        {payload.map((entry, index) => (
-          <p key={index}>
-            {entry.name}: {entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
+import { SensorChart } from "@/components/sensorChart";
+import { StatusList } from "@/components/ui/status-indicator";
 
 interface SensorReading {
   value: number;
@@ -210,109 +170,88 @@ export default function SensorPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const statusItems = statusList.map((board) => ({
+    status: board.status,
+    label: board.name,
+    description: `Board ID: ${board.id}`,
+    latencyMs: board.latencyMs,
+  }));
+
   return (
-    <div className="p-6 space-y-8 bg-white dark:bg-zinc-900 text-black dark:text-white rounded-xl shadow">
+    <div className="p-6 space-y-8 bg-zinc-900 text-white rounded-xl shadow">
       <h1 className="text-2xl font-bold">Sensor Dashboard v2</h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-sm text-gray-400">
         Data updates every 10 minutes. Charts refresh every 30 seconds.
       </p>
 
-      <Chart
+      <SensorChart
         title="Ambient Temperature & Humidity"
+        description="Real-time monitoring of environmental conditions"
         data={chartData}
         lines={[
-          { key: "temp", color: "#8884d8", name: "Temp (°F)" },
-          { key: "humidity", color: "#82ca9d", name: "Humidity (%)" },
+          {
+            key: "temp",
+            color: "#3b82f6",
+            name: "Temperature (°F)",
+            strokeWidth: 3,
+          },
+          {
+            key: "humidity",
+            color: "#10b981",
+            name: "Humidity (%)",
+            strokeWidth: 3,
+          },
         ]}
+        height={350}
       />
 
-      <Chart
+      <SensorChart
         title="Soil Moisture Sensors"
+        description="Moisture levels across different plant containers"
         data={chartData}
         lines={[
-          { key: "soil1", color: "#ffaa00", name: "Spider Plant 1" },
-          { key: "soil2", color: "#ff5588", name: "Spider Plant 2" },
-          { key: "soil3", color: "#55aaff", name: "Unknown Plant" },
+          {
+            key: "soil1",
+            color: "#f59e0b",
+            name: "Spider Plant 1",
+            strokeWidth: 3,
+          },
+          {
+            key: "soil2",
+            color: "#ef4444",
+            name: "Spider Plant 2",
+            strokeWidth: 3,
+          },
+          {
+            key: "soil3",
+            color: "#8b5cf6",
+            name: "Unknown Plant",
+            strokeWidth: 3,
+          },
         ]}
+        height={350}
       />
 
-      <Chart
-        title="Ambient Lux"
+      <SensorChart
+        title="Ambient Light Levels"
+        description="Light intensity measurements in lux"
         data={chartData}
-        lines={[{ key: "light", color: "#00c0ff", name: "Light (lux)" }]}
+        lines={[
+          {
+            key: "light",
+            color: "#06b6d4",
+            name: "Light (lux)",
+            strokeWidth: 3,
+          },
+        ]}
+        height={300}
       />
 
       {/* Board Status */}
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-2">Board Status</h2>
-        <ul className="space-y-2">
-          {statusList.map((board) => (
-            <li
-              key={board.id}
-              className={`p-2 rounded border ${
-                board.status === "healthy"
-                  ? "border-green-500"
-                  : "border-red-500"
-              }`}
-            >
-              <strong>{board.name}</strong>: {board.status}
-              {board.latencyMs !== null && ` (${board.latencyMs} ms)`}
-            </li>
-          ))}
-        </ul>
+        <StatusList items={statusItems} />
       </div>
-    </div>
-  );
-}
-
-function Chart({
-  title,
-  data,
-  lines,
-}: {
-  title: string;
-  data: ChartPoint[];
-  lines: { key: keyof ChartPoint; color: string; name: string }[];
-}) {
-  return (
-    <div style={{ width: "100%", height: 300 }}>
-      <h2 className="text-xl font-bold mb-4">{title}</h2>
-      <ResponsiveContainer>
-        <LineChart data={data} syncId="shared">
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis
-            dataKey="timestamp"
-            stroke="currentColor"
-            tickFormatter={(value) =>
-              DateTime.fromISO(value).toLocal().toFormat("hh:mm a")
-            }
-          />
-          <YAxis stroke="currentColor" />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend />
-          {lines.map((line) => (
-            <Line
-              key={line.key as string}
-              type="monotone"
-              dataKey={line.key as string}
-              stroke={line.color}
-              name={line.name}
-              dot={false}
-              activeDot={{ r: 4 }}
-              connectNulls
-            />
-          ))}
-          <Brush
-            dataKey="timestamp"
-            height={30}
-            stroke="#8884d8"
-            fill="transparent"
-            tickFormatter={(value) =>
-              DateTime.fromISO(value).toLocal().toFormat("MM/dd hh:mm")
-            }
-          />
-        </LineChart>
-      </ResponsiveContainer>
     </div>
   );
 }
