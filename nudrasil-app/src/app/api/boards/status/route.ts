@@ -23,8 +23,6 @@ export async function GET() {
     .from(boards)
     .where(isNotNull(boards.lastKnownIp));
 
-  console.log(boardList);
-
   const checks = await Promise.all(
     boardList.map(async (board) => {
       const start = Date.now();

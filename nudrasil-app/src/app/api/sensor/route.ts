@@ -7,8 +7,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
 
-    console.log("Incoming ESP payload:", body);
-
     if (typeof body.sensor !== "string" || typeof body.value !== "number") {
       return NextResponse.json(
         { success: false, error: "Invalid input" },
@@ -71,19 +69,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    // Debug: Log environment variables
-    console.log("=== Environment Variables Debug ===");
-    console.log("PG_HOST:", process.env.PG_HOST);
-    console.log("PG_USER:", process.env.PG_USER);
-    console.log("PG_DATABASE:", process.env.PG_DATABASE);
-    console.log(
-      "PG_PASSWORD:",
-      process.env.PG_PASSWORD ? "[SET]" : "[NOT SET]",
-    );
-    console.log("ADMIN_PANEL_SECRET:", process.env.ADMIN_PANEL_SECRET);
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log("==================================");
-
     const { searchParams } = new URL(req.url);
     const sensorIdParam = searchParams.get("sensorId");
     const sensorId = sensorIdParam ? parseInt(sensorIdParam, 10) : null;
