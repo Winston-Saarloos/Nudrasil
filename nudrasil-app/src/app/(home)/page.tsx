@@ -10,7 +10,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
   Brush,
 } from "recharts";
 import { DateTime } from "luxon";
@@ -19,9 +18,16 @@ const CustomTooltip = ({
   active,
   payload,
   label,
-}: TooltipProps<string, string>) => {
+}: {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+  }>;
+  label?: string;
+}) => {
   if (active && payload && payload.length) {
-    const localTime = DateTime.fromISO(label)
+    const localTime = DateTime.fromISO(label || "")
       .toLocal()
       .toFormat("MM/dd hh:mm a");
 
