@@ -80,10 +80,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       "PG_PASSWORD:",
       process.env.PG_PASSWORD ? "[SET]" : "[NOT SET]",
     );
-    console.log(
-      "ADMIN_SENSOR_SECRET:",
-      process.env.ADMIN_SENSOR_SECRET ? "[SET]" : "[NOT SET]",
-    );
+    console.log("ADMIN_PANEL_SECRET:", process.env.ADMIN_PANEL_SECRET);
     console.log("NODE_ENV:", process.env.NODE_ENV);
     console.log("==================================");
 

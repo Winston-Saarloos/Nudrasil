@@ -8,7 +8,7 @@ services:
         PG_USER: ${PG_USER}
         PG_PASSWORD: ${PG_PASSWORD}
         PG_DATABASE: ${PG_DATABASE}
-        ADMIN_SENSOR_SECRET: ${ADMIN_SENSOR_SECRET}
+        ADMIN_PANEL_SECRET: ${ADMIN_PANEL_SECRET}
     container_name: nudrasil-app-production
     network_mode: "host"
     restart: unless-stopped
