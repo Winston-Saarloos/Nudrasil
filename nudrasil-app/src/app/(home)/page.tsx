@@ -137,7 +137,9 @@ export default function SensorPage() {
           merge(r, "temp", (v) => (v * 9) / 5 + 32),
         );
         humidityJson.data.forEach((r: SensorReading) => merge(r, "humidity"));
-        lightJson.data.forEach((r: SensorReading) => merge(r, "light"));
+        lightJson.data.forEach((r: SensorReading) =>
+          merge(r, "light", (v) => (v === -1 ? 0 : v)),
+        );
         soil1Json.data.forEach((r: SensorReading) =>
           merge(r, "soil1", (v) =>
             calculateMoisturePercent(v, cal1.min, cal1.max),

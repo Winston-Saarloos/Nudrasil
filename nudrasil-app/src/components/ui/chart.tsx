@@ -76,7 +76,11 @@ const CustomTooltip = ({
                 style={{ backgroundColor: entry.color }}
               />
               <span className="font-medium">{entry.name}:</span>
-              <span className="text-zinc-300">{entry.value}</span>
+              <span className="text-zinc-300">
+                {typeof entry.value === "number"
+                  ? entry.value.toFixed(1)
+                  : entry.value}
+              </span>
             </div>
           ))}
         </div>
