@@ -195,13 +195,13 @@ export default function SensorPage() {
         lines={[
           {
             key: "temp",
-            color: "#3b82f6",
+            color: "#D62728",
             name: "Temperature (°F)",
             strokeWidth: 3,
           },
           {
             key: "humidity",
-            color: "#10b981",
+            color: "#1696D2",
             name: "Humidity (%)",
             strokeWidth: 3,
           },
@@ -217,20 +217,20 @@ export default function SensorPage() {
         lines={[
           {
             key: "soil1",
-            color: "#f59e0b",
+            color: "#17BECF",
             name: "Spider Plant 1",
             strokeWidth: 3,
           },
           {
             key: "soil2",
-            color: "#ef4444",
+            color: "#9467BD",
             name: "Spider Plant 2",
             strokeWidth: 3,
           },
           {
             key: "soil3",
-            color: "#8b5cf6",
-            name: "Unknown Plant",
+            color: "#2ca02c",
+            name: "Devil's Ivy",
             strokeWidth: 3,
           },
         ]}
@@ -245,7 +245,7 @@ export default function SensorPage() {
         lines={[
           {
             key: "light",
-            color: "#06b6d4",
+            color: "#FDBF11",
             name: "Light (lux)",
             strokeWidth: 3,
           },
