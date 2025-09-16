@@ -14,8 +14,9 @@
     "incremental": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@root/*": ["./*"]
-    },    
+      "@root/*": ["./*"],
+      "@models/*": ["./src/models/*"]
+    },
     "plugins": [
       {
         "name": "next"
