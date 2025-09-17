@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Board } from "@models/Board";
+import { Board } from "@models/board";
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
