@@ -15,7 +15,7 @@ import { DateTime } from "luxon";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { cn } from "@/lib/utils";
 import { DayBoundaryIndicator } from "@components/DayBoundryIndicator";
-import { ChartPoint } from "@/models/SensorTypes-temp";
+import { ChartPoint } from "@/models/SensorTypes";
 
 export interface ChartLine {
   key: string;

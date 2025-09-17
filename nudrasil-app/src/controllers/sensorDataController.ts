@@ -4,7 +4,7 @@ import {
   CalibrationResponse,
   SensorReading,
   CalibrationData,
-} from "@/models/SensorTypes-temp";
+} from "@/models/SensorTypes";
 
 export class SensorDataController {
   private static baseUrl = "/api/sensor";
