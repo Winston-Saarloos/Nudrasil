@@ -1,8 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosError, AxiosResponse } from "axios";
 
-import { GenericResponse } from "@models/genericResponse";
+import { GenericResponse } from "@models/GenericResponse";
 
-// Creates an axios instance and uses a custom parser for JSON responses -- since JSON.parse() will truncate BigInts
 const instance = axios.create({});
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

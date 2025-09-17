@@ -3,7 +3,7 @@
 import { SensorChart } from "./SensorChart";
 import useSensorData from "@/hooks/useSensorData";
 import { SENSOR_CONFIGS } from "@/config/sensors";
-import { ChartPoint, SensorReading } from "@/models/sensorTypes";
+import { ChartPoint, SensorReading } from "@/models/SensorTypes";
 import { DateTime } from "luxon";
 
 interface LightChartProps {

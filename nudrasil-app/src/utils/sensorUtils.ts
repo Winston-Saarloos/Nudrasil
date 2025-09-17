@@ -4,7 +4,7 @@ import {
   CalibrationData,
   ChartPoint,
   NumericKeys,
-} from "@/models/sensorTypes";
+} from "@/models/SensorTypes";
 
 /**
  * Calculates moisture percentage from raw value and calibration data
@@ -80,4 +80,3 @@ export function mergeSensorData(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 }
-

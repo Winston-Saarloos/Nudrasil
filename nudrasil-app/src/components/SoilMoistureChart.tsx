@@ -8,7 +8,7 @@ import {
   ChartPoint,
   SensorReading,
   CalibrationData,
-} from "@/models/sensorTypes";
+} from "@/models/SensorTypes";
 import { DateTime } from "luxon";
 
 interface SoilMoistureChartProps {
