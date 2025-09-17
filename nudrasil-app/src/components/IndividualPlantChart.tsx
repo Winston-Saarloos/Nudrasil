@@ -11,7 +11,7 @@ import {
   ChartPoint,
   SensorReading,
   CalibrationData,
-} from "@models/SensorTypes";
+} from "@/models/SensorTypes-temp";
 import {
   getMoistureTextColor,
   getMoistureBgColor,

@@ -3,7 +3,7 @@
 import { SensorChart } from "./SensorChart";
 import useSensorData from "@/hooks/useSensorData";
 import { SENSOR_CONFIGS } from "@/config/sensors";
-import { ChartPoint, SensorReading } from "@/models/SensorTypes";
+import { ChartPoint, SensorReading } from "@/models/SensorTypes-temp";
 import { DateTime } from "luxon";
 
 interface TemperatureHumidityChartProps {
