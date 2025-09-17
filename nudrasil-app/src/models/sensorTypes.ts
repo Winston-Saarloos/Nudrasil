@@ -17,6 +17,7 @@ export interface ChartPoint {
   soil1?: number;
   soil2?: number;
   soil3?: number;
+  moisture?: number;
 }
 
 export type NumericKeys = Exclude<
@@ -35,4 +36,3 @@ export interface SensorDataResponse {
 export interface CalibrationResponse {
   data: CalibrationData;
 }
-

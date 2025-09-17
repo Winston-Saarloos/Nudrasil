@@ -1,5 +1,5 @@
 "use client";
-
+import { ReactNode } from "react";
 import {
   LineChart,
   Line,
@@ -11,9 +11,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { DateTime } from "luxon";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { cn } from "@/lib/utils";
-import { DayBoundaryIndicator } from "./DayBoundryIndicator";
+import { DayBoundaryIndicator } from "@components/DayBoundryIndicator";
 import { ChartPoint } from "@/models/SensorTypes";
 
 export interface ChartLine {
@@ -25,7 +26,7 @@ export interface ChartLine {
 }
 
 interface SensorChartProps {
-  title: string;
+  title: string | ReactNode;
   description?: string;
   data?: ChartPoint[];
   lines: ChartLine[];

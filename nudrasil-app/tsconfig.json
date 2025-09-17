@@ -15,7 +15,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@root/*": ["./*"],
-      "@models/*": ["./src/models/*"]
+      "@models/*": ["./src/models/*"],
+      "@components/*": ["./src/components/*"],
+      "@hooks/*": ["./src/hooks/*"]
     },
     "plugins": [
       {
