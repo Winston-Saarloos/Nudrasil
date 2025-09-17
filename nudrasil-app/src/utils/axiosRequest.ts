@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosError, AxiosResponse } from "axios";
 
-import { GenericResponse } from "@models/GenericResponse";
+import { GenericResponse } from "@/models/GenericResponseTmp";
 
 const instance = axios.create({});
 
