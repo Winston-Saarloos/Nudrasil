@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -15,7 +15,17 @@ import { DateTime } from "luxon";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { cn } from "@/lib/utils";
 import { DayBoundaryIndicator } from "@components/DayBoundryIndicator";
-import { ChartPoint } from "@/models/SensorTypes";
+import {
+  ChartPoint,
+  SensorReading,
+  CalibrationData,
+} from "@models/SensorTypes";
+import {
+  TimePeriod,
+  processSensorDataForTimePeriod,
+} from "@/utils/sensorDataUtils";
+import { calculateMoisturePercent } from "@/utils/sensorUtils";
+import { useBreakpointDown } from "@/hooks/useBreakpoint";
 
 export interface ChartLine {
   key: string;
@@ -29,15 +39,17 @@ interface SensorChartProps {
   title: string | ReactNode;
   description?: string;
   data?: ChartPoint[];
+  rawSensorData?: SensorReading[];
+  calibrationData?: CalibrationData;
   lines: ChartLine[];
   height?: number;
   showGrid?: boolean;
   showLegend?: boolean;
   className?: string;
   yAxisDomain?: [number, number];
-  margin?: { top: number; right: number; left: number; bottom: number };
   isLoading?: boolean;
   error?: Error | null;
+  selectedTimePeriod?: TimePeriod;
 }
 
 const CustomTooltip = ({
@@ -83,20 +95,83 @@ const CustomTooltip = ({
   return null;
 };
 
+function calculateXAxisInterval(dataLength: number, isMobile: boolean): number {
+  if (dataLength <= 0) return 0;
+
+  const targetLabels = isMobile ? 3 : 6;
+  const interval = Math.max(0, Math.floor(dataLength / targetLabels));
+
+  const minInterval = isMobile ? Math.max(interval, 2) : interval;
+
+  return minInterval;
+}
+
 export function SensorChart({
   title,
   description,
   data,
+  rawSensorData,
+  calibrationData,
   lines,
   height = 300,
   showGrid = true,
   showLegend = true,
   className,
   yAxisDomain,
-  margin = { top: 25, right: 20, left: 20, bottom: 0 },
   isLoading = false,
   error = null,
+  selectedTimePeriod = "1day",
 }: SensorChartProps) {
+  const isMobile = useBreakpointDown("md");
+
+  const processedData = useMemo(() => {
+    if (rawSensorData && rawSensorData.length > 0) {
+      try {
+        const processedSensorData = processSensorDataForTimePeriod(
+          rawSensorData,
+          selectedTimePeriod,
+        );
+
+        return processedSensorData.map((sensorReading) => {
+          const chartPoint: ChartPoint = {
+            timestamp: sensorReading.readingTime,
+            time: sensorReading.readingTime,
+          };
+
+          if (calibrationData && lines[0]?.key === "moisture") {
+            const moistureValue = calculateMoisturePercent(
+              sensorReading.value,
+              calibrationData.min,
+              calibrationData.max,
+            );
+            return { ...chartPoint, moisture: moistureValue };
+          } else {
+            const key = lines[0]?.key || "value";
+            return { ...chartPoint, [key]: sensorReading.value };
+          }
+        });
+      } catch (error) {
+        console.error("Error processing sensor data:", error);
+        return [];
+      }
+    }
+    return data || [];
+  }, [rawSensorData, selectedTimePeriod, data, lines, calibrationData]);
+
+  const chartData = processedData;
+
+  const xAxisInterval = useMemo(() => {
+    return calculateXAxisInterval(chartData.length, isMobile);
+  }, [chartData.length, isMobile]);
+
+  const responsiveMargin = useMemo(() => {
+    const baseMargin = { top: 25, right: 20, left: 20, bottom: 0 };
+    if (isMobile) {
+      return { ...baseMargin, bottom: 20 };
+    }
+    return baseMargin;
+  }, [isMobile]);
+
   const gridProps = {
     strokeDasharray: "3 3",
     stroke: "#374151", // gray-700
@@ -105,7 +180,24 @@ export function SensorChart({
 
   const xAxisTickFormatter = (value: string | number) => {
     const dt = DateTime.fromISO(value as string);
-    return dt.toLocal().toFormat("hh:mm a");
+
+    // Format based on time period and breakpoint
+    if (selectedTimePeriod === "7days") {
+      // daily aggregation, show date
+      return isMobile
+        ? dt.toLocal().toFormat("M/d")
+        : dt.toLocal().toFormat("MMM d");
+    } else if (selectedTimePeriod === "3days") {
+      // 6-hour aggregation, show date and time
+      return isMobile
+        ? dt.toLocal().toFormat("M/d h:mm")
+        : dt.toLocal().toFormat("MMM d h:mm a");
+    } else {
+      // hourly aggregation, show time
+      return isMobile
+        ? dt.toLocal().toFormat("h:mm")
+        : dt.toLocal().toFormat("h:mm a");
+    }
   };
 
   const yAxisTickFormatter = (value: string | number) => value.toString();
@@ -148,7 +240,7 @@ export function SensorChart({
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!chartData || chartData.length === 0) {
     return (
       <Card className={cn("w-full", className)}>
         <CardHeader>
@@ -176,16 +268,22 @@ export function SensorChart({
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data} margin={margin}>
+          <LineChart data={chartData} margin={responsiveMargin}>
             {showGrid && <CartesianGrid {...gridProps} />}
             <XAxis
               dataKey="timestamp"
               tickFormatter={xAxisTickFormatter}
               stroke="#6b7280"
-              fontSize={12}
-              tick={{ dy: 4 }}
+              fontSize={isMobile ? 10 : 12}
+              tick={{
+                dy: 4,
+                textAnchor: "middle",
+                fontSize: isMobile ? 10 : 12,
+              }}
               tickLine={{ stroke: "#6b7280" }}
-              interval={data ? Math.floor(data.length / 8) : 0}
+              interval={xAxisInterval}
+              angle={isMobile ? -45 : 0}
+              textAnchor={isMobile ? "end" : "middle"}
             />
             <YAxis
               domain={yAxisDomain}
@@ -202,7 +300,7 @@ export function SensorChart({
                 }}
               />
             )}
-            <DayBoundaryIndicator data={data} />
+            <DayBoundaryIndicator data={chartData} />
             {lines.map((line) => (
               <Line
                 key={line.key}

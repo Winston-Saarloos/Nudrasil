@@ -14,26 +14,26 @@ export interface PlantMoistureConfig {
 }
 
 // Color coded moisture levels
-const COLOR_WHITE = "#ffffff";
-const COLOR_GREEN = "#22c55e";
-const COLOR_AMBER = "#f59e0b";
-const COLOR_RED = "#ef4444";
+const COLOR_BLACK = "#000000";
+const COLOR_GREEN = "#10b981"; // Emerald-500
+const COLOR_AMBER = "#f59e0b"; // Amber-500
+const COLOR_RED = "#ef4444"; // Red-500
 
 const MOISTURE_COLORS = {
   healthy: {
-    color: COLOR_WHITE,
+    color: COLOR_BLACK,
     bgColor: COLOR_GREEN,
     status: "healthy" as const,
     description: "Healthy moisture level",
   },
   caution: {
-    color: COLOR_WHITE,
+    color: COLOR_BLACK,
     bgColor: COLOR_AMBER,
     status: "caution" as const,
     description: "Caution - monitor closely",
   },
   problem: {
-    color: COLOR_WHITE,
+    color: COLOR_BLACK,
     bgColor: COLOR_RED,
     status: "problem" as const,
     description: "Problem - immediate attention needed",
@@ -51,7 +51,7 @@ export function getMoistureLevel(
 
   if (!config) {
     return {
-      color: COLOR_WHITE,
+      color: COLOR_BLACK,
       bgColor: "#6b7280", // gray-500
       status: "healthy",
       description: "Unknown plant type",

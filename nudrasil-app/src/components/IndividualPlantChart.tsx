@@ -17,15 +17,20 @@ import {
   getMoistureBgColor,
 } from "@/utils/moistureColorUtils";
 import { calculateMoisturePercent } from "@/utils/sensorUtils";
+import { TimePeriod } from "@/utils/sensorDataUtils";
 
 interface IndividualPlantChartProps {
   sensorConfig: SensorConfig;
   className?: string;
+  selectedTimePeriod?: TimePeriod;
+  showGrid?: boolean;
 }
 
 export function IndividualPlantChart({
   sensorConfig,
   className,
+  selectedTimePeriod = "1day",
+  showGrid = true,
 }: IndividualPlantChartProps) {
   const sensorData = useSensorData(sensorConfig.id);
   const sensorCalibrationData = useSensorCalibrationData(sensorConfig.id);
@@ -75,7 +80,9 @@ export function IndividualPlantChart({
         </div>
       }
       description={`Soil moisture: ${sensorConfig.unit}`}
-      data={chartData}
+      rawSensorData={sensorData.data}
+      calibrationData={sensorCalibrationData.data}
+      selectedTimePeriod={selectedTimePeriod}
       lines={[
         {
           key: "moisture",
@@ -90,6 +97,7 @@ export function IndividualPlantChart({
       isLoading={isLoading}
       error={error}
       className={className}
+      showGrid={showGrid}
     />
   );
 }

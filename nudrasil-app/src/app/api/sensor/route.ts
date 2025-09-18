@@ -90,7 +90,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .from(sensorReadings)
       .where(sensorId ? eq(sensorReadings.sensorId, sensorId) : undefined)
       .orderBy(desc(sensorReadings.readingTime))
-      .limit(400);
+      .limit(1000);
 
     const data = rawReadings.map((r) => ({
       ...r,

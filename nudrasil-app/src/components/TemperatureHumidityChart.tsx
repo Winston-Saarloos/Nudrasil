@@ -8,10 +8,12 @@ import { DateTime } from "luxon";
 
 interface TemperatureHumidityChartProps {
   className?: string;
+  showGrid?: boolean;
 }
 
 export function TemperatureHumidityChart({
   className,
+  showGrid = true,
 }: TemperatureHumidityChartProps) {
   const tempQuery = useSensorData(SENSOR_CONFIGS.temperature.id);
   const humidityQuery = useSensorData(SENSOR_CONFIGS.humidity.id);
@@ -47,6 +49,7 @@ export function TemperatureHumidityChart({
       isLoading={isLoading}
       error={error}
       className={className}
+      showGrid={showGrid}
     />
   );
 }

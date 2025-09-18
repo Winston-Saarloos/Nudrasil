@@ -34,7 +34,7 @@ export function DayBoundaryIndicator({ data }: DayBoundaryIndicatorProps) {
         <ReferenceLine
           key={`day-${index}`}
           x={boundary.timestamp}
-          stroke="#6b7280"
+          stroke="rgba(255, 255, 255, 0.1)"
           strokeDasharray="5 5"
           strokeWidth={2}
           opacity={0.8}

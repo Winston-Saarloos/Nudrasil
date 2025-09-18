@@ -15,7 +15,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "temperature",
     unit: "°F",
     description: "Ambient temperature",
-    color: "#D62728",
+    color: "#ef4444", // Red-500
     conversion: (value: number) => (value * 9) / 5 + 32, // Convert Celsius to Fahrenheit
   },
   humidity: {
@@ -24,7 +24,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "humidity",
     unit: "%",
     description: "Relative humidity",
-    color: "#1696D2",
+    color: "#3b82f6", // Blue-500
   },
   light: {
     id: 4,
@@ -32,7 +32,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "light",
     unit: "lux",
     description: "Ambient light level",
-    color: "#FDBF11",
+    color: "#f59e0b", // Amber-500
     conversion: (value: number) => (value === -1 ? 0 : value), // Handle -1 values
   },
   soil1: {
@@ -41,7 +41,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "soil",
     unit: "%",
     description: "Soil moisture for Spider Plant 1",
-    color: "#17BECF",
+    color: "#06b6d4", // Cyan-500
   },
   soil2: {
     id: 9,
@@ -49,7 +49,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "soil",
     unit: "%",
     description: "Soil moisture for Spider Plant 2",
-    color: "#9467BD",
+    color: "#8b5cf6", // Violet-500
   },
   soil3: {
     id: 10,
@@ -57,7 +57,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     type: "soil",
     unit: "%",
     description: "Soil moisture for Devil's Ivy",
-    color: "#2ca02c",
+    color: "#10b981", // Emerald-500
   },
 };
 
@@ -78,4 +78,3 @@ export function getSensorConfigById(id: number): SensorConfig | undefined {
 export const SENSOR_KEYS = Object.keys(SENSOR_CONFIGS) as Array<
   keyof typeof SENSOR_CONFIGS
 >;
-

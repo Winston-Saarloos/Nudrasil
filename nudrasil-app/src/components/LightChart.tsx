@@ -8,9 +8,10 @@ import { DateTime } from "luxon";
 
 interface LightChartProps {
   className?: string;
+  showGrid?: boolean;
 }
 
-export function LightChart({ className }: LightChartProps) {
+export function LightChart({ className, showGrid = true }: LightChartProps) {
   const lightQuery = useSensorData(SENSOR_CONFIGS.light.id);
 
   const data = lightQuery.data ? mergeLightData(lightQuery.data) : undefined;
@@ -32,6 +33,7 @@ export function LightChart({ className }: LightChartProps) {
       isLoading={lightQuery.isLoading}
       error={lightQuery.error}
       className={className}
+      showGrid={showGrid}
     />
   );
 }
