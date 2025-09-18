@@ -1,68 +1,113 @@
 "use client";
-"use client";
 import Link from "next/link";
 import { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
-import { DialogTitle } from "@/components/ui/dialog";
+import { Menu, Home, Settings, Leaf, ChevronDown } from "lucide-react";
+
+import { DialogTitle } from "@components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu";
+import { Button } from "@components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@components/ui/sheet";
 
 export default function DefaultLayout({ children }: { children: ReactNode }) {
-  const linkButtons = (
+  const configItems = [
+    { href: "/admin/boards", label: "Arduino Boards", icon: Settings },
+    { href: "/admin/board-configs", label: "Board Config", icon: Settings },
+    { href: "/admin/sensors", label: "Sensors", icon: Settings },
+    { href: "/admin/sensor-types", label: "Sensor Types", icon: Settings },
+  ];
+
+  const mobileNavItems = (
     <>
       <Button variant="ghost" className="justify-start">
-        <Link href="/">Home</Link>
+        <Home className="h-4 w-4 mr-2" />
+        <Link href="/">Dashboard</Link>
       </Button>
-      <Button variant="ghost" className="justify-start">
-        <Link href="/admin/boards">Boards</Link>
-      </Button>
-      <Button variant="ghost" className="justify-start">
-        <Link href="/admin/board-configs">Board Config</Link>
-      </Button>
-      <Button variant="ghost" className="justify-start">
-        <Link href="/admin/sensors">Sensors Config</Link>
-      </Button>
-      <Button variant="ghost" className="justify-start">
-        <Link href="/admin/sensor-types">Sensors Types Config</Link>
-      </Button>
+      {configItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Button key={item.href} variant="ghost" className="justify-start">
+            <Icon className="h-4 w-4 mr-2" />
+            <Link href={item.href}>{item.label}</Link>
+          </Button>
+        );
+      })}
     </>
   );
 
   return (
-    <div className="flex min-h-screen">
-      {/* Side Navigation */}
-      <aside className="hidden md:flex flex-col w-64 bg-muted p-4 border-r">
-        <div className="mb-6 flex items-center gap-2">
-          {/* Inline SVG logo */}
-          <span className="text-lg font-bold">Nudrasil</span>
+    <div className="min-h-screen">
+      {/* top navigation */}
+      <header className="bg-background border-b">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Leaf className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">Plant Monitor</span>
+          </div>
+
+          {/* desktop navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            <Button variant="ghost" asChild>
+              <Link href="/" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configuration
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {configItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link
+                        href={item.href}
+                        className="flex items-center gap-2"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+
+          {/* mobile menu */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64">
+                <DialogTitle></DialogTitle>
+                <div className="mb-6 flex items-center gap-2 pl-4">
+                  <Leaf className="h-6 w-6 text-primary" />
+                  <span className="text-lg font-bold">Plant Monitor</span>
+                </div>
+                <nav className="flex flex-col gap-2 pl-6">{mobileNavItems}</nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
-        <nav className="flex flex-col gap-2">{linkButtons}</nav>
-      </aside>
+      </header>
 
-      {/* Main Content */}
-      <div className="flex-1">
-        {/* Top Header */}
-        <header className="flex items-center justify-between p-4 border-b md:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64">
-              <DialogTitle></DialogTitle>
-              <div className="mb-6 flex items-center gap-2 pl-4">
-                <span className="text-lg font-bold">Nudrasil</span>
-              </div>
-              <nav className="flex flex-col gap-2 pl-6">{linkButtons}</nav>
-            </SheetContent>
-          </Sheet>
-          <span className="text-lg font-bold">Nudrasil</span>
-        </header>
-
-        {/* Page Content */}
-        <main className="p-6">{children}</main>
-      </div>
+      {/* main content */}
+      <main className="p-6">{children}</main>
     </div>
   );
 }
