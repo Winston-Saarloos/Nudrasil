@@ -1,66 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-
-interface SensorType {
-  id: number;
-  name: string;
-}
+import { useSensorTypes } from "@hooks/useSensorTypes";
+import {
+  createSensorType,
+  deleteSensorType,
+} from "@/controllers/sensorTypesController";
 
 export default function SensorTypesAdminPage() {
-  const [sensorTypes, setSensorTypes] = useState<SensorType[]>([]);
   const [newTypeName, setNewTypeName] = useState("");
   const [secret, setSecret] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const {
+    data: sensorTypes = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useSensorTypes(secretData?.isValid || false);
 
-  useEffect(() => {
-    if (secretData?.isValid) {
-      fetchTypes();
-    }
-  }, [secretData]);
-
-  async function fetchTypes() {
-    if (!secretData?.secret || !secretData?.isValid) return;
-    const res = await fetch("/api/admin/sensor-types", {
-      headers: { Authorization: secretData.secret },
-    });
-    const data: SensorType[] = await res.json();
-    setSensorTypes(data);
-  }
-
-  async function createType() {
-    if (!newTypeName.trim() || !secretData?.secret || !secretData?.isValid)
+  const handleCreateType = async () => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
       return;
-    await fetch("/api/admin/sensor-types", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({ name: newTypeName }),
-    });
-    setNewTypeName("");
-    fetchTypes();
-  }
+    }
 
-  async function deleteType(id: number) {
-    if (!secretData?.secret || !secretData?.isValid) return;
-    await fetch("/api/admin/sensor-types", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({ id }),
-    });
-    fetchTypes();
-  }
+    if (!newTypeName.trim()) {
+      setStatus("Type name is required");
+      return;
+    }
+
+    try {
+      await createSensorType(secretData.secret, { name: newTypeName });
+      setStatus("✓ Sensor type created");
+      setNewTypeName("");
+      refetch();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
+    }
+  };
+
+  const handleDeleteType = async (id: number) => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
+      return;
+    }
+
+    try {
+      await deleteSensorType(secretData.secret, { id });
+      setStatus("✓ Sensor type deleted");
+      refetch();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
+    }
+  };
 
   return (
     <div className="p-6 space-y-8">
@@ -82,10 +82,20 @@ export default function SensorTypesAdminPage() {
                   placeholder="New Type Name"
                   className="max-w-md"
                 />
-                <Button onClick={createType} disabled={!newTypeName.trim()}>
+                <Button
+                  onClick={handleCreateType}
+                  disabled={!newTypeName.trim()}
+                >
                   Add Type
                 </Button>
               </div>
+              {status && (
+                <p
+                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+                >
+                  {status}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -94,7 +104,14 @@ export default function SensorTypesAdminPage() {
               <CardTitle>Existing Sensor Types</CardTitle>
             </CardHeader>
             <CardContent>
-              {sensorTypes && sensorTypes.length > 0 ? (
+              {isLoading ? (
+                <p className="text-muted-foreground">Loading sensor types...</p>
+              ) : isError ? (
+                <p className="text-red-600">
+                  Error loading sensor types:{" "}
+                  {error instanceof Error ? error.message : "Unknown error"}
+                </p>
+              ) : sensorTypes && sensorTypes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sensorTypes.map((type) => (
                     <Card key={type.id}>
@@ -109,7 +126,7 @@ export default function SensorTypesAdminPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => deleteType(type.id)}
+                            onClick={() => handleDeleteType(type.id)}
                           >
                             Delete
                           </Button>
