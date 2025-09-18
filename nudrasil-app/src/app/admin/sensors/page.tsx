@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -13,16 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { Input } from "@components/ui/input";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-
-interface SensorType {
-  id: number;
-  name: string;
-}
-
-interface Board {
-  id: number;
-  name: string;
-}
+import { useSensors } from "@hooks/useSensors";
+import { useSensorTypes } from "@hooks/useSensorTypes";
+import { useBoards } from "@hooks/useBoards";
+import {
+  createSensor,
+  updateSensor,
+  deleteSensor,
+} from "@/controllers/sensorsController";
 
 interface Sensor {
   id: number;
@@ -44,9 +42,6 @@ interface NewSensorInput {
 }
 
 export default function SensorsAdminPage() {
-  const [sensors, setSensors] = useState<Sensor[]>([]);
-  const [types, setTypes] = useState<SensorType[]>([]);
-  const [boards, setBoards] = useState<Board[]>([]);
   const [newSensor, setNewSensor] = useState<NewSensorInput>({
     name: "",
     typeId: "",
@@ -55,85 +50,72 @@ export default function SensorsAdminPage() {
   });
   const [editingSensorId, setEditingSensorId] = useState<number | null>(null);
   const [secret, setSecret] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const {
+    data: sensors = [],
+    isLoading: sensorsLoading,
+    isError: sensorsError,
+    error: sensorsErrorData,
+    refetch: refetchSensors,
+  } = useSensors(secretData?.isValid || false);
+  const { data: types = [] } = useSensorTypes(secretData?.isValid || false);
+  const { data: boards = [] } = useBoards(secretData?.isValid || false);
 
-  useEffect(() => {
-    if (secretData?.isValid) {
-      fetchData();
-    }
-  }, [secretData]);
-
-  async function fetchData() {
-    if (!secretData?.secret || !secretData?.isValid) return;
-
-    const [sensorsRes, typesRes, boardsRes] = await Promise.all([
-      fetch("/api/admin/sensors", {
-        headers: { Authorization: secretData.secret },
-      }),
-      fetch("/api/admin/sensor-types", {
-        headers: { Authorization: secretData.secret },
-      }),
-      fetch("/api/admin/boards", {
-        headers: { Authorization: secretData.secret },
-      }),
-    ]);
-
-    const sensorsData: Sensor[] = await sensorsRes.json();
-    const typesData: SensorType[] = await typesRes.json();
-    const boardsData: { data: Board[] } = await boardsRes.json();
-
-    setSensors(sensorsData);
-    setTypes(typesData);
-    if (boardsData) setBoards(boardsData.data);
-  }
-
-  async function createOrUpdateSensor() {
+  const handleCreateOrUpdateSensor = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
       return;
     }
 
-    const method = editingSensorId ? "PATCH" : "POST";
-    const url = "/api/admin/sensors";
-
-    await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({
-        id: editingSensorId,
-        ...newSensor,
+    try {
+      const sensorData = {
+        name: newSensor.name,
+        location: newSensor.location,
+        typeId: parseInt(newSensor.typeId),
+        boardId: parseInt(newSensor.boardId),
         minCalibratedValue: newSensor.minCalibratedValue
           ? parseFloat(newSensor.minCalibratedValue)
           : null,
         maxCalibratedValue: newSensor.maxCalibratedValue
           ? parseFloat(newSensor.maxCalibratedValue)
           : null,
-      }),
-    });
+      };
 
-    setNewSensor({ name: "", typeId: "", location: "", boardId: "" });
-    setEditingSensorId(null);
-    fetchData();
-  }
+      if (editingSensorId) {
+        await updateSensor(secretData.secret, {
+          id: editingSensorId,
+          ...sensorData,
+        });
+        setStatus("✓ Sensor updated");
+      } else {
+        await createSensor(secretData.secret, sensorData);
+        setStatus("✓ Sensor created");
+      }
 
-  async function deleteSensor(id: number) {
+      setNewSensor({ name: "", typeId: "", location: "", boardId: "" });
+      setEditingSensorId(null);
+      refetchSensors();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
+    }
+  };
+
+  const handleDeleteSensor = async (id: number) => {
     if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
       return;
     }
 
-    await fetch("/api/admin/sensors", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({ id }),
-    });
-    fetchData();
-  }
+    try {
+      await deleteSensor(secretData.secret, { id });
+      setStatus("✓ Sensor deleted");
+      refetchSensors();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
+    }
+  };
 
   function startEditing(sensor: Sensor) {
     setEditingSensorId(sensor.id);
@@ -247,7 +229,7 @@ export default function SensorsAdminPage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={createOrUpdateSensor}
+                  onClick={handleCreateOrUpdateSensor}
                   disabled={
                     !newSensor.name.trim() ||
                     !newSensor.location.trim() ||
@@ -263,6 +245,13 @@ export default function SensorsAdminPage() {
                   </Button>
                 )}
               </div>
+              {status && (
+                <p
+                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+                >
+                  {status}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -271,7 +260,16 @@ export default function SensorsAdminPage() {
               <CardTitle>Existing Sensors</CardTitle>
             </CardHeader>
             <CardContent>
-              {sensors && sensors.length > 0 ? (
+              {sensorsLoading ? (
+                <p className="text-muted-foreground">Loading sensors...</p>
+              ) : sensorsError ? (
+                <p className="text-red-600">
+                  Error loading sensors:{" "}
+                  {sensorsErrorData instanceof Error
+                    ? sensorsErrorData.message
+                    : "Unknown error"}
+                </p>
+              ) : sensors && sensors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sensors.map((sensor) => (
                     <Card key={sensor.id}>
@@ -304,7 +302,7 @@ export default function SensorsAdminPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => deleteSensor(sensor.id)}
+                            onClick={() => handleDeleteSensor(sensor.id)}
                           >
                             Delete
                           </Button>
