@@ -21,7 +21,7 @@ const fetchAdminSecretValidation = async (
 
 const useAdminSecretValidation = (secret: string) => {
   const result = useQuery({
-    queryKey: ["adminSecret", secret],
+    queryKey: ["adminSecret"],
     queryFn: async () => fetchAdminSecretValidation(secret),
     enabled: !!secret.trim(),
     staleTime: 5 * 60 * 1000, // 5 minutes in ms

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 
 import { Board } from "@models/Board";
 import { Input } from "@components/ui/input";
@@ -8,9 +8,14 @@ import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useBoards } from "@hooks/useBoards";
+import {
+  createBoard,
+  updateBoard,
+  deleteBoard,
+} from "@/controllers/boardsController";
 
 export default function BoardsPage() {
-  const [boards, setBoards] = useState<Board[]>([]);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -18,142 +23,66 @@ export default function BoardsPage() {
   const [secret, setSecret] = useState("");
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const {
+    data: boards = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useBoards(secretData?.isValid || false);
 
-  const fetchBoards = useCallback(async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      return;
-    }
-
-    const res = await fetch("/api/admin/boards", {
-      headers: {
-        Authorization: secretData.secret,
-      },
-    });
-
-    let result = null;
-    try {
-      const text = await res.text();
-      if (text) {
-        result = JSON.parse(text);
-      }
-    } catch (error) {
-      console.error("Failed to parse boards response:", error);
-    }
-
-    if (res.ok && result?.success && result?.value?.data) {
-      setBoards(result.value.data);
-    } else {
-      console.error("Failed to load boards", result);
-    }
-  }, [secretData]);
-
-  useEffect(() => {
-    if (secretData?.isValid) {
-      fetchBoards();
-    }
-  }, [fetchBoards, secretData]);
-
-  const createBoard = async () => {
+  const handleCreateBoard = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
       setStatus("Invalid admin secret");
       return;
     }
 
-    const res = await fetch("/api/admin/boards", {
-      method: "POST",
-      body: JSON.stringify({ name, location }),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-    });
-
-    let result = null;
     try {
-      const text = await res.text();
-      if (text) {
-        result = JSON.parse(text);
-      }
-    } catch (e) {
-      console.error("Failed to parse response JSON:", e);
-    }
-
-    if (res.ok && result?.success) {
-      setStatus("✓  Board created");
+      await createBoard(secretData.secret, { name, location });
+      setStatus("✓ Board created");
       setName("");
       setLocation("");
-      fetchBoards();
-    } else {
-      setStatus(`${result?.message || "Unknown error"}`);
+      refetch();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
     }
   };
 
-  const updateBoard = async () => {
+  const handleUpdateBoard = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
       setStatus("Invalid admin secret");
       return;
     }
 
-    const res = await fetch("/api/admin/boards", {
-      method: "PATCH",
-      body: JSON.stringify({ id: editId, name, location }),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-    });
-
-    let result = null;
-    try {
-      const text = await res.text();
-      if (text) {
-        result = JSON.parse(text);
-      }
-    } catch (e) {
-      console.error("Failed to parse response JSON:", e);
+    if (!editId) {
+      setStatus("No board selected for editing");
+      return;
     }
 
-    if (res.ok && result?.success) {
+    try {
+      await updateBoard(secretData.secret, { id: editId, name, location });
       setStatus("✓ Board updated");
       setName("");
       setLocation("");
       setEditId(null);
-      fetchBoards();
-    } else {
-      setStatus(`${result?.message || "Unknown error"}`);
+      refetch();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
     }
   };
 
-  const deleteBoard = async (id: number) => {
+  const handleDeleteBoard = async (id: number) => {
     if (!secretData?.secret || !secretData?.isValid) {
       setStatus("Invalid admin secret");
       return;
     }
 
-    const res = await fetch("/api/admin/boards", {
-      method: "DELETE",
-      body: JSON.stringify({ id }),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-    });
-
-    let result = null;
     try {
-      const text = await res.text();
-      if (text) {
-        result = JSON.parse(text);
-      }
-    } catch (e) {
-      console.error("Failed to parse response JSON:", e);
-    }
-
-    if (res.ok && result?.success) {
+      await deleteBoard(secretData.secret, { id });
       setStatus("✓ Board deleted");
-      fetchBoards();
-    } else {
-      setStatus(`${result?.message || "Unknown error"}`);
+      refetch();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
     }
   };
 
@@ -192,7 +121,7 @@ export default function BoardsPage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={editId ? updateBoard : createBoard}
+                  onClick={editId ? handleUpdateBoard : handleCreateBoard}
                   disabled={!name.trim() || !location.trim()}
                 >
                   {editId ? "Update Board" : "Create Board"}
@@ -225,7 +154,14 @@ export default function BoardsPage() {
               <CardTitle>Existing Boards</CardTitle>
             </CardHeader>
             <CardContent>
-              {boards.length > 0 ? (
+              {isLoading ? (
+                <p className="text-muted-foreground">Loading boards...</p>
+              ) : isError ? (
+                <p className="text-red-600">
+                  Error loading boards:{" "}
+                  {error instanceof Error ? error.message : "Unknown error"}
+                </p>
+              ) : boards.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {boards.map((board) => (
                     <Card key={board.id}>
@@ -252,7 +188,7 @@ export default function BoardsPage() {
                             size="sm"
                             onClick={() => {
                               if (confirm(`Delete board "${board.name}"?`)) {
-                                deleteBoard(board.id);
+                                handleDeleteBoard(board.id);
                               }
                             }}
                           >
