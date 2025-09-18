@@ -2,17 +2,22 @@
 import { db } from "@/lib/db";
 import { boards } from "@root/drizzle/schema";
 import { eq } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifyAdminSecret } from "@/utils/verifyAdminSecret";
+import {
+  createApiResponse,
+  createApiError,
+  createUnauthorizedResponse,
+} from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
   try {
     await verifyAdminSecret(req);
 
     const data = await db.select().from(boards).orderBy(boards.id);
-    return NextResponse.json({ data });
+    return createApiResponse({ data });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -23,7 +28,7 @@ export async function POST(req: NextRequest) {
     const { name, location } = await req.json();
 
     if (!name || !location) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return createApiError("Missing fields", 400);
     }
 
     await db.insert(boards).values({
@@ -33,9 +38,9 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -46,7 +51,7 @@ export async function PATCH(req: NextRequest) {
     const { id, name, location } = await req.json();
 
     if (!id || !name || !location) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return createApiError("Missing fields", 400);
     }
 
     await db
@@ -54,9 +59,9 @@ export async function PATCH(req: NextRequest) {
       .set({ name, location, updatedAt: new Date() })
       .where(eq(boards.id, id));
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -67,12 +72,12 @@ export async function DELETE(req: NextRequest) {
     const { id } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ error: "Missing board ID" }, { status: 400 });
+      return createApiError("Missing board ID", 400);
     }
 
     await db.delete(boards).where(eq(boards.id, id));
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }

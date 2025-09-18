@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface GenericResponse<T = any> {
-  Success: boolean;
-  Error?: string | null;
-  ErrorId?: string | null;
-  Message?: string | null;
-  Value: T;
+export interface GenericResponse<T> {
+  success: boolean;
+  value: T | null;
+  error?: string | null;
+  errorId?: string | null;
+  message?: string | null;
+  status?: number;
+  url?: string;
+  method?: string;
 }

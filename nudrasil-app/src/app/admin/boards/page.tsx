@@ -1,33 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Board } from "@/models/Board";
+import { useEffect, useState, useCallback } from "react";
+
+import { Board } from "@models/Board";
+import { Input } from "@components/ui/input";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import AdminSecretInput from "@components/AdminSecretInput";
+import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 
 export default function BoardsPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const [secret, setSecret] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
+  const [secret, setSecret] = useState("");
 
-  useEffect(() => {
-    const storedSecret = localStorage.getItem("admin_secret");
-    if (storedSecret) {
-      setSecret(storedSecret);
+  const { data: secretData } = useAdminSecretValidation(secret);
+
+  const fetchBoards = useCallback(async () => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (secret) {
-      fetchBoards();
-    }
-  }, [secret]);
-
-  const fetchBoards = async () => {
     const res = await fetch("/api/admin/boards", {
       headers: {
-        Authorization: secret,
+        Authorization: secretData.secret,
       },
     });
 
@@ -37,24 +36,35 @@ export default function BoardsPage() {
       if (text) {
         result = JSON.parse(text);
       }
-    } catch (e) {
-      console.error("Failed to parse boards response:", e);
+    } catch (error) {
+      console.error("Failed to parse boards response:", error);
     }
 
-    if (res.ok && result?.data) {
-      setBoards(result.data);
+    if (res.ok && result?.success && result?.value?.data) {
+      setBoards(result.value.data);
     } else {
       console.error("Failed to load boards", result);
     }
-  };
+  }, [secretData]);
+
+  useEffect(() => {
+    if (secretData?.isValid) {
+      fetchBoards();
+    }
+  }, [fetchBoards, secretData]);
 
   const createBoard = async () => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
+      return;
+    }
+
     const res = await fetch("/api/admin/boards", {
       method: "POST",
       body: JSON.stringify({ name, location }),
       headers: {
         "Content-Type": "application/json",
-        Authorization: secret,
+        Authorization: secretData.secret,
       },
     });
 
@@ -68,23 +78,28 @@ export default function BoardsPage() {
       console.error("Failed to parse response JSON:", e);
     }
 
-    if (res.ok) {
-      setStatus("✅ Board created");
+    if (res.ok && result?.success) {
+      setStatus("✓  Board created");
       setName("");
       setLocation("");
       fetchBoards();
     } else {
-      setStatus(`❌ ${result?.error || "Unknown error"}`);
+      setStatus(`${result?.message || "Unknown error"}`);
     }
   };
 
   const updateBoard = async () => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
+      return;
+    }
+
     const res = await fetch("/api/admin/boards", {
       method: "PATCH",
       body: JSON.stringify({ id: editId, name, location }),
       headers: {
         "Content-Type": "application/json",
-        Authorization: secret,
+        Authorization: secretData.secret,
       },
     });
 
@@ -98,24 +113,29 @@ export default function BoardsPage() {
       console.error("Failed to parse response JSON:", e);
     }
 
-    if (res.ok) {
-      setStatus("✅ Board updated");
+    if (res.ok && result?.success) {
+      setStatus("✓ Board updated");
       setName("");
       setLocation("");
       setEditId(null);
       fetchBoards();
     } else {
-      setStatus(`❌ ${result?.error || "Unknown error"}`);
+      setStatus(`${result?.message || "Unknown error"}`);
     }
   };
 
   const deleteBoard = async (id: number) => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
+      return;
+    }
+
     const res = await fetch("/api/admin/boards", {
       method: "DELETE",
       body: JSON.stringify({ id }),
       headers: {
         "Content-Type": "application/json",
-        Authorization: secret,
+        Authorization: secretData.secret,
       },
     });
 
@@ -129,11 +149,11 @@ export default function BoardsPage() {
       console.error("Failed to parse response JSON:", e);
     }
 
-    if (res.ok) {
-      setStatus("✅ Board deleted");
+    if (res.ok && result?.success) {
+      setStatus("✓ Board deleted");
       fetchBoards();
     } else {
-      setStatus(`❌ ${result?.error || "Unknown error"}`);
+      setStatus(`${result?.message || "Unknown error"}`);
     }
   };
 
@@ -144,68 +164,110 @@ export default function BoardsPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 space-y-4">
-      <h2 className="text-xl font-bold">
-        {editId ? "Edit Board" : "Create Board"}
-      </h2>
+    <div className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold">Boards Admin</h1>
 
-      <input
-        placeholder="Admin Secret"
-        type="password"
-        className="w-full border p-2"
-        value={secret}
-        onChange={(e) => {
-          setSecret(e.target.value);
-          localStorage.setItem("admin_secret", e.target.value);
-        }}
-      />
+      <AdminSecretInput onSecretChange={setSecret} />
 
-      {secret && (
+      {secretData?.isValid && (
         <>
-          <input
-            placeholder="Name"
-            className="w-full border p-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            placeholder="Location"
-            className="w-full border p-2"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-          <button
-            onClick={editId ? updateBoard : createBoard}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            {editId ? "Update Board" : "Create Board"}
-          </button>
-          {status && <p>{status}</p>}
-          <hr className="my-6" />
-          <h3 className="font-bold">Boards:</h3>
-          <ul className="space-y-2">
-            {boards.map((b) => (
-              <li key={b.id} className="border p-2 rounded">
-                <strong>{b.name}</strong> – {b.location} - [ {b.id} ]
-                <button
-                  className="ml-2 text-sm text-blue-600 underline"
-                  onClick={() => startEdit(b)}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {editId ? "Edit Board" : "Create New Board"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  placeholder="Board Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <Input
+                  placeholder="Location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={editId ? updateBoard : createBoard}
+                  disabled={!name.trim() || !location.trim()}
                 >
-                  Edit
-                </button>
-                <button
-                  className="ml-2 text-sm text-red-600 underline"
-                  onClick={() => {
-                    if (confirm(`Delete board "${b.name}"?`)) {
-                      deleteBoard(b.id);
-                    }
-                  }}
+                  {editId ? "Update Board" : "Create Board"}
+                </Button>
+                {editId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditId(null);
+                      setName("");
+                      setLocation("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+              {status && (
+                <p
+                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
                 >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
+                  {status}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Existing Boards</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {boards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {boards.map((board) => (
+                    <Card key={board.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">{board.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Location: {board.location}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ID: {board.id}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => startEdit(board)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Delete board "${board.name}"?`)) {
+                                deleteBoard(board.id);
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No boards found.</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

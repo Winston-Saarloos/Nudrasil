@@ -7,8 +7,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import { Input } from "@components/ui/input";
+import AdminSecretInput from "@components/AdminSecretInput";
+import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 
 interface SensorType {
   id: number;
@@ -50,30 +54,29 @@ export default function SensorsAdminPage() {
     boardId: "",
   });
   const [editingSensorId, setEditingSensorId] = useState<number | null>(null);
-  const [adminSecret, setAdminSecret] = useState("");
+  const [secret, setSecret] = useState("");
+
+  const { data: secretData } = useAdminSecretValidation(secret);
 
   useEffect(() => {
-    const storedSecret = localStorage.getItem("admin_secret");
-    if (storedSecret) {
-      setAdminSecret(storedSecret);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (adminSecret) {
+    if (secretData?.isValid) {
       fetchData();
     }
-  }, [adminSecret]);
+  }, [secretData]);
 
   async function fetchData() {
-    if (!adminSecret) return;
+    if (!secretData?.secret || !secretData?.isValid) return;
 
     const [sensorsRes, typesRes, boardsRes] = await Promise.all([
-      fetch("/api/admin/sensors", { headers: { Authorization: adminSecret } }),
-      fetch("/api/admin/sensor-types", {
-        headers: { Authorization: adminSecret },
+      fetch("/api/admin/sensors", {
+        headers: { Authorization: secretData.secret },
       }),
-      fetch("/api/admin/boards", { headers: { Authorization: adminSecret } }),
+      fetch("/api/admin/sensor-types", {
+        headers: { Authorization: secretData.secret },
+      }),
+      fetch("/api/admin/boards", {
+        headers: { Authorization: secretData.secret },
+      }),
     ]);
 
     const sensorsData: Sensor[] = await sensorsRes.json();
@@ -86,6 +89,10 @@ export default function SensorsAdminPage() {
   }
 
   async function createOrUpdateSensor() {
+    if (!secretData?.secret || !secretData?.isValid) {
+      return;
+    }
+
     const method = editingSensorId ? "PATCH" : "POST";
     const url = "/api/admin/sensors";
 
@@ -93,7 +100,7 @@ export default function SensorsAdminPage() {
       method,
       headers: {
         "Content-Type": "application/json",
-        Authorization: adminSecret,
+        Authorization: secretData.secret,
       },
       body: JSON.stringify({
         id: editingSensorId,
@@ -113,11 +120,15 @@ export default function SensorsAdminPage() {
   }
 
   async function deleteSensor(id: number) {
+    if (!secretData?.secret || !secretData?.isValid) {
+      return;
+    }
+
     await fetch("/api/admin/sensors", {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        Authorization: adminSecret,
+        Authorization: secretData.secret,
       },
       body: JSON.stringify({ id }),
     });
@@ -142,154 +153,171 @@ export default function SensorsAdminPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl mb-4">Sensors Admin</h1>
+    <div className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold">Sensors Admin</h1>
 
-      <div className="mb-6">
-        <input
-          type="password"
-          placeholder="Enter Admin Secret"
-          value={adminSecret}
-          onChange={(e) => {
-            setAdminSecret(e.target.value);
-            localStorage.setItem("admin_secret", e.target.value);
-          }}
-          className="border p-2 rounded w-full"
-        />
-      </div>
+      <AdminSecretInput onSecretChange={setSecret} />
 
-      {adminSecret && (
+      {secretData?.isValid && (
         <>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <input
-              value={newSensor.name}
-              onChange={(e) =>
-                setNewSensor({ ...newSensor, name: e.target.value })
-              }
-              placeholder="Sensor Name"
-              className="border p-2 rounded"
-            />
-            <input
-              value={newSensor.location}
-              onChange={(e) =>
-                setNewSensor({ ...newSensor, location: e.target.value })
-              }
-              placeholder="Sensor Location"
-              className="border p-2 rounded"
-            />
-            <input
-              type="number"
-              step="any"
-              placeholder="Min Calibrated Value"
-              value={newSensor.minCalibratedValue ?? ""}
-              onChange={(e) =>
-                setNewSensor({
-                  ...newSensor,
-                  minCalibratedValue: e.target.value,
-                })
-              }
-              className="border p-2 rounded"
-            />
-
-            <input
-              type="number"
-              step="any"
-              placeholder="Max Calibrated Value"
-              value={newSensor.maxCalibratedValue ?? ""}
-              onChange={(e) =>
-                setNewSensor({
-                  ...newSensor,
-                  maxCalibratedValue: e.target.value,
-                })
-              }
-              className="border p-2 rounded"
-            />
-            <Select
-              value={newSensor.typeId}
-              onValueChange={(value) =>
-                setNewSensor({ ...newSensor, typeId: value })
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select Type" />
-              </SelectTrigger>
-              {types && types.length > 0 && (
-                <SelectContent>
-                  {types.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              )}
-            </Select>
-            <Select
-              value={newSensor.boardId}
-              onValueChange={(value) =>
-                setNewSensor({ ...newSensor, boardId: value })
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select Board" />
-              </SelectTrigger>
-              {boards && boards.length > 0 && (
-                <SelectContent>
-                  {boards.map((board) => (
-                    <SelectItem key={board.id} value={board.id.toString()}>
-                      {board.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              )}
-            </Select>
-
-            <Button onClick={createOrUpdateSensor}>
-              {editingSensorId ? "Update Sensor" : "Add Sensor"}
-            </Button>
-
-            {editingSensorId && (
-              <Button variant="outline" onClick={cancelEditing}>
-                Cancel
-              </Button>
-            )}
-          </div>
-
-          {sensors && sensors.length > 0 && (
-            <ul className="space-y-2">
-              {sensors.map((sensor) => (
-                <li
-                  key={sensor.id}
-                  className="border p-2 rounded flex justify-between items-center"
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {editingSensorId ? "Edit Sensor" : "Create New Sensor"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  value={newSensor.name}
+                  onChange={(e) =>
+                    setNewSensor({ ...newSensor, name: e.target.value })
+                  }
+                  placeholder="Sensor Name"
+                />
+                <Input
+                  value={newSensor.location}
+                  onChange={(e) =>
+                    setNewSensor({ ...newSensor, location: e.target.value })
+                  }
+                  placeholder="Sensor Location"
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Min Calibrated Value"
+                  value={newSensor.minCalibratedValue ?? ""}
+                  onChange={(e) =>
+                    setNewSensor({
+                      ...newSensor,
+                      minCalibratedValue: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Max Calibrated Value"
+                  value={newSensor.maxCalibratedValue ?? ""}
+                  onChange={(e) =>
+                    setNewSensor({
+                      ...newSensor,
+                      maxCalibratedValue: e.target.value,
+                    })
+                  }
+                />
+                <Select
+                  value={newSensor.typeId}
+                  onValueChange={(value) =>
+                    setNewSensor({ ...newSensor, typeId: value })
+                  }
                 >
-                  <div>
-                    <div>{sensor.name}</div>
-                    <hr />
-                    <div>Board ID: {sensor.boardId}</div>
-                    <div>
-                      Calibrated Range: {sensor.minCalibratedValue ?? "??"} to{" "}
-                      {sensor.maxCalibratedValue ?? "??"}
-                    </div>
-                    <div>Type: {sensor.typeId}</div>
-                    <div>Location: {sensor.location}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => startEditing(sensor)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => deleteSensor(sensor.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  {types && types.length > 0 && (
+                    <SelectContent>
+                      {types.map((type) => (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  )}
+                </Select>
+                <Select
+                  value={newSensor.boardId}
+                  onValueChange={(value) =>
+                    setNewSensor({ ...newSensor, boardId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Board" />
+                  </SelectTrigger>
+                  {boards && boards.length > 0 && (
+                    <SelectContent>
+                      {boards.map((board) => (
+                        <SelectItem key={board.id} value={board.id.toString()}>
+                          {board.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  )}
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={createOrUpdateSensor}
+                  disabled={
+                    !newSensor.name.trim() ||
+                    !newSensor.location.trim() ||
+                    !newSensor.typeId ||
+                    !newSensor.boardId
+                  }
+                >
+                  {editingSensorId ? "Update Sensor" : "Add Sensor"}
+                </Button>
+                {editingSensorId && (
+                  <Button variant="outline" onClick={cancelEditing}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Existing Sensors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sensors && sensors.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {sensors.map((sensor) => (
+                    <Card key={sensor.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">{sensor.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Location: {sensor.location}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Board ID: {sensor.boardId}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Type ID: {sensor.typeId}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Calibrated Range:{" "}
+                            {sensor.minCalibratedValue ?? "??"} to{" "}
+                            {sensor.maxCalibratedValue ?? "??"}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => startEditing(sensor)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteSensor(sensor.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No sensors found.</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

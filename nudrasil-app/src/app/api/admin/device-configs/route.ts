@@ -1,9 +1,13 @@
 // app/api/admin/device-configs/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { device_configs } from "@root/drizzle/schema";
 import { verifyAdminSecret } from "@/utils/verifyAdminSecret";
+import {
+  createApiResponse,
+  createUnauthorizedResponse,
+} from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,13 +21,13 @@ export async function GET(req: NextRequest) {
         .select()
         .from(device_configs)
         .where(eq(device_configs.device_id, deviceId));
-      return NextResponse.json(configs);
+      return createApiResponse({ data: configs });
     } else {
       const configs = await db.select().from(device_configs);
-      return NextResponse.json(configs);
+      return createApiResponse({ data: configs });
     }
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -38,9 +42,9 @@ export async function POST(req: NextRequest) {
       config,
     });
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -55,9 +59,9 @@ export async function PATCH(req: NextRequest) {
       .set({ config })
       .where(eq(device_configs.id, id));
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -68,8 +72,8 @@ export async function DELETE(req: NextRequest) {
     const { id } = await req.json();
 
     await db.delete(device_configs).where(eq(device_configs.id, id));
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }

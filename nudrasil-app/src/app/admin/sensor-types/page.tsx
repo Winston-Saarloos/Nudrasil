@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@components/ui/input";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import AdminSecretInput from "@components/AdminSecretInput";
+import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 
 interface SensorType {
   id: number;
@@ -12,37 +15,33 @@ interface SensorType {
 export default function SensorTypesAdminPage() {
   const [sensorTypes, setSensorTypes] = useState<SensorType[]>([]);
   const [newTypeName, setNewTypeName] = useState("");
-  const [adminSecret, setAdminSecret] = useState("");
+  const [secret, setSecret] = useState("");
+
+  const { data: secretData } = useAdminSecretValidation(secret);
 
   useEffect(() => {
-    const storedSecret = localStorage.getItem("admin_secret");
-    if (storedSecret) {
-      setAdminSecret(storedSecret);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (adminSecret) {
+    if (secretData?.isValid) {
       fetchTypes();
     }
-  }, [adminSecret]);
+  }, [secretData]);
 
   async function fetchTypes() {
-    if (!adminSecret) return;
+    if (!secretData?.secret || !secretData?.isValid) return;
     const res = await fetch("/api/admin/sensor-types", {
-      headers: { Authorization: adminSecret },
+      headers: { Authorization: secretData.secret },
     });
     const data: SensorType[] = await res.json();
     setSensorTypes(data);
   }
 
   async function createType() {
-    if (!newTypeName.trim()) return;
+    if (!newTypeName.trim() || !secretData?.secret || !secretData?.isValid)
+      return;
     await fetch("/api/admin/sensor-types", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: adminSecret,
+        Authorization: secretData.secret,
       },
       body: JSON.stringify({ name: newTypeName }),
     });
@@ -51,11 +50,12 @@ export default function SensorTypesAdminPage() {
   }
 
   async function deleteType(id: number) {
+    if (!secretData?.secret || !secretData?.isValid) return;
     await fetch("/api/admin/sensor-types", {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        Authorization: adminSecret,
+        Authorization: secretData.secret,
       },
       body: JSON.stringify({ id }),
     });
@@ -63,50 +63,66 @@ export default function SensorTypesAdminPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl mb-4">Sensor Types Admin</h1>
+    <div className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold">Sensor Types Admin</h1>
 
-      <div className="mb-6">
-        <Input
-          type="password"
-          placeholder="Enter Admin Secret"
-          value={adminSecret}
-          onChange={(e) => {
-            setAdminSecret(e.target.value);
-            localStorage.setItem("admin_secret", e.target.value);
-          }}
-        />
-      </div>
+      <AdminSecretInput onSecretChange={setSecret} />
 
-      {adminSecret && (
+      {secretData?.isValid && (
         <>
-          <div className="flex gap-2 mb-4">
-            <Input
-              value={newTypeName}
-              onChange={(e) => setNewTypeName(e.target.value)}
-              placeholder="New Type Name"
-            />
-            <Button onClick={createType}>Add Type</Button>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Sensor Type</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  value={newTypeName}
+                  onChange={(e) => setNewTypeName(e.target.value)}
+                  placeholder="New Type Name"
+                  className="max-w-md"
+                />
+                <Button onClick={createType} disabled={!newTypeName.trim()}>
+                  Add Type
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-          <ul className="space-y-2">
-            {sensorTypes &&
-              sensorTypes.length > 0 &&
-              sensorTypes.map((type) => (
-                <li
-                  key={type.id}
-                  className="border p-2 rounded flex justify-between"
-                >
-                  {type.name}
-                  <Button
-                    variant="destructive"
-                    onClick={() => deleteType(type.id)}
-                  >
-                    Delete
-                  </Button>
-                </li>
-              ))}
-          </ul>
+          <Card>
+            <CardHeader>
+              <CardTitle>Existing Sensor Types</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sensorTypes && sensorTypes.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {sensorTypes.map((type) => (
+                    <Card key={type.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="font-semibold">{type.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              ID: {type.id}
+                            </p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteType(type.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No sensor types found.</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

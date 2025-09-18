@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { sensorTypes } from "@root/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { verifyAdminSecret } from "@/utils/verifyAdminSecret";
+import {
+  createApiResponse,
+  createApiError,
+  createUnauthorizedResponse,
+} from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,9 +20,9 @@ export async function GET(req: NextRequest) {
       })
       .from(sensorTypes);
 
-    return NextResponse.json(types);
+    return createApiResponse({ data: types });
   } catch (err) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -28,14 +33,14 @@ export async function POST(req: NextRequest) {
     const { name } = await req.json();
 
     if (!name || typeof name !== "string") {
-      return NextResponse.json({ error: "Invalid type name" }, { status: 400 });
+      return createApiError("Invalid type name", 400);
     }
 
     await db.insert(sensorTypes).values({ name });
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }
 
@@ -46,13 +51,13 @@ export async function DELETE(req: NextRequest) {
     const { id } = await req.json();
 
     if (!id || typeof id !== "number") {
-      return NextResponse.json({ error: "Invalid type id" }, { status: 400 });
+      return createApiError("Invalid type id", 400);
     }
 
     await db.delete(sensorTypes).where(eq(sensorTypes.id, id));
 
-    return NextResponse.json({ success: true });
+    return createApiResponse({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedResponse();
   }
 }

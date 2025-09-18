@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState, useCallback } from "react";
+import { Input } from "@components/ui/input";
+import { Button } from "@components/ui/button";
+import { Textarea } from "@components/ui/textarea";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
   CardFooter,
-} from "@/components/ui/card";
+} from "@components/ui/card";
+import AdminSecretInput from "@components/AdminSecretInput";
+import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 
 interface DeviceConfig {
   id: number;
@@ -25,45 +27,47 @@ interface Board {
 }
 
 export default function DeviceConfigsAdminPage() {
-  const [secret, setSecret] = useState("");
   const [configs, setConfigs] = useState<DeviceConfig[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [newDeviceId, setNewDeviceId] = useState("");
   const [newConfig, setNewConfig] = useState("{}");
-  const [unlocked, setUnlocked] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [secret, setSecret] = useState("");
 
-  useEffect(() => {
-    const storedSecret = localStorage.getItem("admin_secret");
-    if (storedSecret) {
-      setSecret(storedSecret);
-      attemptUnlock(storedSecret);
-    }
-  }, []);
+  const { data: secretData } = useAdminSecretValidation(secret);
 
-  const attemptUnlock = async (value: string) => {
-    const res = await fetch(`/api/admin/device-configs`, {
-      headers: { Authorization: secret },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setConfigs(data);
-      setUnlocked(true);
-      fetchBoards(value);
-    }
-  };
+  const fetchBoards = useCallback(async () => {
+    if (!secretData?.secret || !secretData?.isValid) return;
 
-  const fetchBoards = async (adminSecret = secret) => {
     const res = await fetch(`/api/admin/boards`, {
       headers: {
-        Authorization: adminSecret,
+        Authorization: secretData.secret,
       },
     });
     if (res.ok) {
       const json = await res.json();
       setBoards(json.data);
     }
-  };
+  }, [secretData]);
+
+  const loadConfigs = useCallback(async () => {
+    if (!secretData?.secret || !secretData?.isValid) return;
+
+    const res = await fetch(`/api/admin/device-configs`, {
+      headers: { Authorization: secretData.secret },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setConfigs(data);
+      fetchBoards();
+    }
+  }, [secretData, fetchBoards]);
+
+  useEffect(() => {
+    if (secretData?.isValid) {
+      loadConfigs();
+    }
+  }, [secretData, loadConfigs]);
 
   const validateJson = (text: string) => {
     try {
@@ -88,6 +92,11 @@ export default function DeviceConfigsAdminPage() {
   };
 
   const createConfig = async () => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      alert("Invalid admin secret");
+      return;
+    }
+
     if (!validateJson(newConfig)) {
       alert("Please fix JSON before submitting");
       return;
@@ -96,7 +105,10 @@ export default function DeviceConfigsAdminPage() {
     const parsed = JSON.parse(newConfig);
     const res = await fetch(`/api/admin/device-configs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: secret },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: secretData.secret,
+      },
       body: JSON.stringify({
         deviceId: newDeviceId,
         config: parsed,
@@ -104,7 +116,7 @@ export default function DeviceConfigsAdminPage() {
     });
 
     if (res.ok) {
-      await attemptUnlock(secret);
+      await loadConfigs();
       setNewDeviceId("");
       setNewConfig("{}");
     } else {
@@ -116,10 +128,18 @@ export default function DeviceConfigsAdminPage() {
     id: number,
     updatedConfig: Record<string, unknown>,
   ) => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      alert("Invalid admin secret");
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/device-configs`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: secret },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: secretData.secret,
+        },
         body: JSON.stringify({
           id,
           config: updatedConfig,
@@ -127,7 +147,7 @@ export default function DeviceConfigsAdminPage() {
       });
 
       if (res.ok) {
-        await attemptUnlock(secret);
+        await loadConfigs();
       } else {
         alert("Failed to update config");
       }
@@ -137,16 +157,24 @@ export default function DeviceConfigsAdminPage() {
   };
 
   const deleteConfig = async (id: number) => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      alert("Invalid admin secret");
+      return;
+    }
+
     if (!confirm("Are you sure you want to delete this config?")) return;
 
     const res = await fetch(`/api/admin/device-configs`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: secret },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: secretData.secret,
+      },
       body: JSON.stringify({ id }),
     });
 
     if (res.ok) {
-      await attemptUnlock(secret);
+      await loadConfigs();
     } else {
       alert("Failed to delete config");
     }
@@ -156,24 +184,11 @@ export default function DeviceConfigsAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Device Configs Admin</h1>
 
-      {!unlocked && (
-        <div className="flex items-center gap-4">
-          <Input
-            type="password"
-            placeholder="Enter Admin Secret"
-            value={secret}
-            onChange={(e) => {
-              setSecret(e.target.value);
-              localStorage.setItem("admin_secret", e.target.value);
-            }}
-          />
-          <Button onClick={() => attemptUnlock(secret)}>Load Configs</Button>
-        </div>
-      )}
+      <AdminSecretInput onSecretChange={setSecret} />
 
-      {unlocked && (
+      {secretData?.isValid && (
         <>
-          {configs.length > 0 && (
+          {configs && configs.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {configs.map((config) => (
                 <Card key={config.id}>
@@ -216,15 +231,16 @@ export default function DeviceConfigsAdminPage() {
             </div>
           )}
 
-          <div>
-            <h2 className="text-2xl font-semibold mt-10 mb-4">
-              Create New Config
-            </h2>
-            <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Config</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <Input
                 placeholder="Device ID (e.g., ESP001)"
                 value={newDeviceId}
                 onChange={(e) => setNewDeviceId(e.target.value)}
+                className="max-w-md"
               />
               <Textarea
                 className="font-mono"
@@ -238,32 +254,51 @@ export default function DeviceConfigsAdminPage() {
               />
               {jsonError && <p className="text-red-500 text-sm">{jsonError}</p>}
               <div className="flex gap-2">
-                <Button onClick={createConfig}>Create Config</Button>
+                <Button
+                  onClick={createConfig}
+                  disabled={
+                    !newDeviceId.trim() || !newConfig.trim() || !!jsonError
+                  }
+                >
+                  Create Config
+                </Button>
                 <Button variant="outline" onClick={formatJson}>
                   Format JSON
                 </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4">Available Boards</h2>
-            {boards.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {boards.map((board) => (
-                  <Card key={board.id}>
-                    <CardContent>
-                      <p className="text-muted-foreground">
-                        {`${board.name} (ID: ${board.id}) ${board.location ? board.location : ""}`}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No boards found.</p>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Boards</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {boards && boards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {boards.map((board) => (
+                    <Card key={board.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">{board.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            ID: {board.id}
+                          </p>
+                          {board.location && (
+                            <p className="text-sm text-muted-foreground">
+                              Location: {board.location}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No boards found.</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

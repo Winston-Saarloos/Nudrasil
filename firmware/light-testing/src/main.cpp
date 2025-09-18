@@ -14,7 +14,7 @@ void setup() {
 
   // Start TSL2561
   if (!tsl.begin()) {
-    Serial.println("❌ Could not find a valid TSL2561 sensor. Check wiring!");
+    Serial.println("Could not find a valid TSL2561 sensor. Check wiring!");
     while (1);
   }
 
@@ -22,7 +22,7 @@ void setup() {
   tsl.enableAutoRange(true);  // Auto gain
   tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  // Longer time = more sensitivity
 
-  Serial.println("✅ TSL2561 initialized!");
+  Serial.println("TSL2561 initialized!");
 }
 
 void loop() {
@@ -34,7 +34,7 @@ void loop() {
     Serial.print(event.light);
     Serial.println(" lux");
   } else {
-    Serial.println("⚠️ Sensor overload or failed to read light data.");
+    Serial.println("Sensor overload or failed to read light data.");
   }
 
   delay(1000);
