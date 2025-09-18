@@ -28,7 +28,7 @@ export async function fetchDeviceConfigs(
       throw new Error("Admin secret is required");
     }
 
-    const request = await axiosRequest<DeviceConfig[]>({
+    const request = await axiosRequest<{ data: DeviceConfig[] }>({
       method: "GET",
       url: "/api/admin/device-configs",
       headers: {
@@ -37,7 +37,7 @@ export async function fetchDeviceConfigs(
     });
 
     if (request.success && request.value) {
-      return request.value;
+      return request.value.data;
     }
 
     throw new Error(request.message || "Failed to fetch device configs");

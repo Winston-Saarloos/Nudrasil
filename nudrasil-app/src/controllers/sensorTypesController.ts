@@ -19,7 +19,7 @@ export async function fetchSensorTypes(secret: string): Promise<SensorType[]> {
       throw new Error("Admin secret is required");
     }
 
-    const request = await axiosRequest<SensorType[]>({
+    const request = await axiosRequest<{ data: SensorType[] }>({
       method: "GET",
       url: "/api/admin/sensor-types",
       headers: {
@@ -27,8 +27,8 @@ export async function fetchSensorTypes(secret: string): Promise<SensorType[]> {
       },
     });
 
-    if (request.success && request.value) {
-      return request.value;
+    if (request.success && request.value?.data) {
+      return request.value.data;
     }
 
     throw new Error(request.message || "Failed to fetch sensor types");

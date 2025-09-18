@@ -22,7 +22,11 @@ export async function GET(req: NextRequest) {
 
     return createApiResponse({ data: types });
   } catch (err) {
-    return createUnauthorizedResponse();
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return createUnauthorizedResponse();
+    }
+    console.error("GET /api/admin/sensor-types error:", err);
+    return createApiError("Internal server error", 500);
   }
 }
 
@@ -40,7 +44,11 @@ export async function POST(req: NextRequest) {
 
     return createApiResponse({ success: true });
   } catch (err) {
-    return createUnauthorizedResponse();
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return createUnauthorizedResponse();
+    }
+    console.error("POST /api/admin/sensor-types error:", err);
+    return createApiError("Internal server error", 500);
   }
 }
 
@@ -58,6 +66,10 @@ export async function DELETE(req: NextRequest) {
 
     return createApiResponse({ success: true });
   } catch (err) {
-    return createUnauthorizedResponse();
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return createUnauthorizedResponse();
+    }
+    console.error("DELETE /api/admin/sensor-types error:", err);
+    return createApiError("Internal server error", 500);
   }
 }
