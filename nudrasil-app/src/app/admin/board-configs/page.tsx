@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Textarea } from "@components/ui/textarea";
@@ -13,69 +13,44 @@ import {
 } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-
-interface DeviceConfig {
-  id: number;
-  device_id: string;
-  config: Record<string, unknown>;
-}
-
-interface Board {
-  id: number;
-  name: string;
-  location: string | null;
-}
+import { useDeviceConfigs } from "@hooks/useDeviceConfigs";
+import { useBoards } from "@hooks/useBoards";
+import {
+  createDeviceConfig,
+  updateDeviceConfig,
+  deleteDeviceConfig,
+} from "@/controllers/deviceConfigsController";
 
 export default function DeviceConfigsAdminPage() {
-  const [configs, setConfigs] = useState<DeviceConfig[]>([]);
-  const [boards, setBoards] = useState<Board[]>([]);
   const [newDeviceId, setNewDeviceId] = useState("");
   const [newConfig, setNewConfig] = useState("{}");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [secret, setSecret] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
 
   const { data: secretData } = useAdminSecretValidation(secret);
-
-  const fetchBoards = useCallback(async () => {
-    if (!secretData?.secret || !secretData?.isValid) return;
-
-    const res = await fetch(`/api/admin/boards`, {
-      headers: {
-        Authorization: secretData.secret,
-      },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      setBoards(json.data);
-    }
-  }, [secretData]);
-
-  const loadConfigs = useCallback(async () => {
-    if (!secretData?.secret || !secretData?.isValid) return;
-
-    const res = await fetch(`/api/admin/device-configs`, {
-      headers: { Authorization: secretData.secret },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setConfigs(data);
-      fetchBoards();
-    }
-  }, [secretData, fetchBoards]);
-
-  useEffect(() => {
-    if (secretData?.isValid) {
-      loadConfigs();
-    }
-  }, [secretData, loadConfigs]);
+  const {
+    data: configs = [],
+    isLoading: configsLoading,
+    isError: configsError,
+    error: configsErrorData,
+    refetch: refetchConfigs,
+  } = useDeviceConfigs(secretData?.isValid || false);
+  const {
+    data: boards = [],
+    isLoading: boardsLoading,
+    isError: boardsError,
+    error: boardsErrorData,
+  } = useBoards(secretData?.isValid || false);
 
   const validateJson = (text: string) => {
     try {
       JSON.parse(text);
       setJsonError(null);
       return true;
-    } catch (err) {
+    } catch (error) {
       setJsonError("Invalid JSON format");
+      console.error(error);
       return false;
     }
   };
@@ -91,92 +66,67 @@ export default function DeviceConfigsAdminPage() {
     }
   };
 
-  const createConfig = async () => {
+  const handleCreateConfig = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
-      alert("Invalid admin secret");
+      setStatus("Invalid admin secret");
       return;
     }
 
     if (!validateJson(newConfig)) {
-      alert("Please fix JSON before submitting");
-      return;
-    }
-
-    const parsed = JSON.parse(newConfig);
-    const res = await fetch(`/api/admin/device-configs`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({
-        deviceId: newDeviceId,
-        config: parsed,
-      }),
-    });
-
-    if (res.ok) {
-      await loadConfigs();
-      setNewDeviceId("");
-      setNewConfig("{}");
-    } else {
-      alert("Failed to create config");
-    }
-  };
-
-  const updateConfig = async (
-    id: number,
-    updatedConfig: Record<string, unknown>,
-  ) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      alert("Invalid admin secret");
+      setStatus("Please fix JSON before submitting");
       return;
     }
 
     try {
-      const res = await fetch(`/api/admin/device-configs`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: secretData.secret,
-        },
-        body: JSON.stringify({
-          id,
-          config: updatedConfig,
-        }),
+      const parsed = JSON.parse(newConfig);
+      await createDeviceConfig(secretData.secret, {
+        deviceId: newDeviceId,
+        config: parsed,
       });
-
-      if (res.ok) {
-        await loadConfigs();
-      } else {
-        alert("Failed to update config");
-      }
-    } catch {
-      alert("Invalid JSON format!");
+      setStatus("✓ Config created");
+      setNewDeviceId("");
+      setNewConfig("{}");
+      refetchConfigs();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
     }
   };
 
-  const deleteConfig = async (id: number) => {
+  const handleUpdateConfig = async (
+    id: number,
+    updatedConfig: Record<string, unknown>,
+  ) => {
     if (!secretData?.secret || !secretData?.isValid) {
-      alert("Invalid admin secret");
+      setStatus("Invalid admin secret");
+      return;
+    }
+
+    try {
+      await updateDeviceConfig(secretData.secret, {
+        id,
+        config: updatedConfig,
+      });
+      setStatus("✓ Config updated");
+      refetchConfigs();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
+    }
+  };
+
+  const handleDeleteConfig = async (id: number) => {
+    if (!secretData?.secret || !secretData?.isValid) {
+      setStatus("Invalid admin secret");
       return;
     }
 
     if (!confirm("Are you sure you want to delete this config?")) return;
 
-    const res = await fetch(`/api/admin/device-configs`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secretData.secret,
-      },
-      body: JSON.stringify({ id }),
-    });
-
-    if (res.ok) {
-      await loadConfigs();
-    } else {
-      alert("Failed to delete config");
+    try {
+      await deleteDeviceConfig(secretData.secret, { id });
+      setStatus("✓ Config deleted");
+      refetchConfigs();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unknown error");
     }
   };
 
@@ -188,7 +138,16 @@ export default function DeviceConfigsAdminPage() {
 
       {secretData?.isValid && (
         <>
-          {configs && configs.length > 0 && (
+          {configsLoading ? (
+            <p className="text-muted-foreground">Loading device configs...</p>
+          ) : configsError ? (
+            <p className="text-red-600">
+              Error loading device configs:{" "}
+              {configsErrorData instanceof Error
+                ? configsErrorData.message
+                : "Unknown error"}
+            </p>
+          ) : configs && configs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {configs.map((config) => (
                 <Card key={config.id}>
@@ -200,28 +159,21 @@ export default function DeviceConfigsAdminPage() {
                       value={JSON.stringify(config.config, null, 2)}
                       rows={10}
                       onChange={(e) => {
-                        const updated = [...configs];
-                        const index = updated.findIndex(
-                          (c) => c.id === config.id,
-                        );
-                        try {
-                          updated[index].config = JSON.parse(e.target.value);
-                          setConfigs(updated);
-                        } catch {
-                          // Optional: Show parse error
-                        }
+                        JSON.parse(e.target.value);
                       }}
                     />
                   </CardContent>
                   <CardFooter className="flex gap-2">
                     <Button
-                      onClick={() => updateConfig(config.id, config.config)}
+                      onClick={() =>
+                        handleUpdateConfig(config.id, config.config)
+                      }
                     >
                       Save Changes
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={() => deleteConfig(config.id)}
+                      onClick={() => handleDeleteConfig(config.id)}
                     >
                       Delete
                     </Button>
@@ -229,6 +181,8 @@ export default function DeviceConfigsAdminPage() {
                 </Card>
               ))}
             </div>
+          ) : (
+            <p className="text-muted-foreground">No device configs found.</p>
           )}
 
           <Card>
@@ -255,7 +209,7 @@ export default function DeviceConfigsAdminPage() {
               {jsonError && <p className="text-red-500 text-sm">{jsonError}</p>}
               <div className="flex gap-2">
                 <Button
-                  onClick={createConfig}
+                  onClick={handleCreateConfig}
                   disabled={
                     !newDeviceId.trim() || !newConfig.trim() || !!jsonError
                   }
@@ -266,6 +220,13 @@ export default function DeviceConfigsAdminPage() {
                   Format JSON
                 </Button>
               </div>
+              {status && (
+                <p
+                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+                >
+                  {status}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -274,7 +235,16 @@ export default function DeviceConfigsAdminPage() {
               <CardTitle>Available Boards</CardTitle>
             </CardHeader>
             <CardContent>
-              {boards && boards.length > 0 ? (
+              {boardsLoading ? (
+                <p className="text-muted-foreground">Loading boards...</p>
+              ) : boardsError ? (
+                <p className="text-red-600">
+                  Error loading boards:{" "}
+                  {boardsErrorData instanceof Error
+                    ? boardsErrorData.message
+                    : "Unknown error"}
+                </p>
+              ) : boards && boards.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {boards.map((board) => (
                     <Card key={board.id}>
