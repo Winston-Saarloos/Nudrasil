@@ -1,5 +1,6 @@
 /**
  * Calculates moisture percentage from raw value based on sensor calibration data
+ * High Value = Dry, Low Value = Wet
  */
 export function calculateMoisturePercent(
   rawValue: number,
@@ -7,5 +8,5 @@ export function calculateMoisturePercent(
   soilMax: number,
 ): number {
   const clamped = Math.max(Math.min(rawValue, soilMax), soilMin);
-  return Math.round(((clamped - soilMin) / (soilMax - soilMin)) * 100);
+  return Math.round(((soilMax - clamped) / (soilMax - soilMin)) * 100);
 }

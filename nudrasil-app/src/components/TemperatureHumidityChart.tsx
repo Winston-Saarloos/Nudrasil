@@ -5,6 +5,7 @@ import useSensorData from "@/hooks/useSensorData";
 import { SENSOR_CONFIGS } from "@/config/sensors";
 import { ChartPoint, SensorReading } from "@/models/SensorTypes";
 import { DateTime } from "luxon";
+import { Thermometer, Droplets } from "lucide-react";
 
 interface TemperatureHumidityChartProps {
   className?: string;
@@ -26,9 +27,37 @@ export function TemperatureHumidityChart({
       ? mergeTemperatureHumidityData(tempQuery.data, humidityQuery.data)
       : undefined;
 
+  const lastReading = data && data.length > 0 ? data[data.length - 1] : null;
+  const lastTempValue = lastReading?.temp;
+  const lastHumidityValue = lastReading?.humidity;
+
   return (
     <SensorChart
-      title="Ambient Temperature & Humidity"
+      title={
+        <div className="flex items-center justify-between">
+          <span>Ambient Temperature & Humidity</span>
+          {(lastTempValue !== undefined || lastHumidityValue !== undefined) && (
+            <div className="flex items-center gap-3">
+              {lastTempValue !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Thermometer className="h-4 w-4 text-red-500" />
+                  <span className="font-semibold text-red-500">
+                    {lastTempValue.toFixed(1)}°F
+                  </span>
+                </div>
+              )}
+              {lastHumidityValue !== undefined && (
+                <div className="flex items-center gap-2">
+                  <Droplets className="h-4 w-4 text-blue-500" />
+                  <span className="font-semibold text-blue-500">
+                    {lastHumidityValue.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      }
       description="Real-time monitoring of environmental conditions"
       data={data}
       lines={[

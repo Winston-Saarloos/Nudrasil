@@ -99,11 +99,14 @@ function calculateXAxisInterval(dataLength: number, isMobile: boolean): number {
   if (dataLength <= 0) return 0;
 
   const targetLabels = isMobile ? 3 : 6;
-  const interval = Math.max(0, Math.floor(dataLength / targetLabels));
 
-  const minInterval = isMobile ? Math.max(interval, 2) : interval;
+  if (dataLength <= targetLabels) {
+    return 0;
+  }
 
-  return minInterval;
+  const interval = Math.max(1, Math.floor(dataLength / targetLabels));
+
+  return isMobile ? Math.max(interval, 2) : interval;
 }
 
 export function SensorChart({
@@ -181,26 +184,16 @@ export function SensorChart({
   const xAxisTickFormatter = (value: string | number) => {
     const dt = DateTime.fromISO(value as string);
 
-    // Format based on time period and breakpoint
-    if (selectedTimePeriod === "7days") {
-      // daily aggregation, show date
-      return isMobile
-        ? dt.toLocal().toFormat("M/d")
-        : dt.toLocal().toFormat("MMM d");
-    } else if (selectedTimePeriod === "3days") {
-      // 6-hour aggregation, show date and time
-      return isMobile
-        ? dt.toLocal().toFormat("M/d h:mm")
-        : dt.toLocal().toFormat("MMM d h:mm a");
-    } else {
-      // hourly aggregation, show time
-      return isMobile
-        ? dt.toLocal().toFormat("h:mm")
-        : dt.toLocal().toFormat("h:mm a");
+    if (!dt.isValid) {
+      return String(value);
     }
+
+    const localTime = dt.toLocal();
+
+    return localTime.toFormat(isMobile ? "HH:mm" : "h:mm a");
   };
 
-  const yAxisTickFormatter = (value: string | number) => value.toString();
+  const yAxisTickFormatter = (value: string | number) => String(value);
 
   if (isLoading) {
     return (
@@ -282,7 +275,7 @@ export function SensorChart({
               }}
               tickLine={{ stroke: "#6b7280" }}
               interval={xAxisInterval}
-              angle={isMobile ? -45 : 0}
+              minTickGap={isMobile ? 20 : 10}
               textAnchor={isMobile ? "end" : "middle"}
             />
             <YAxis

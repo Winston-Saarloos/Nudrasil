@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Nudrasil",
-  description: "A fun project :]",
+  description:
+    "A side project for monitoring the soil moisture of my plants using an Arduino.",
 };
 
 export default function RootLayout({

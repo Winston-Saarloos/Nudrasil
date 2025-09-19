@@ -5,6 +5,7 @@ import useSensorData from "@/hooks/useSensorData";
 import { SENSOR_CONFIGS } from "@/config/sensors";
 import { ChartPoint, SensorReading } from "@/models/SensorTypes";
 import { DateTime } from "luxon";
+import { Sun, Moon } from "lucide-react";
 
 interface LightChartProps {
   className?: string;
@@ -16,9 +17,28 @@ export function LightChart({ className, showGrid = true }: LightChartProps) {
 
   const data = lightQuery.data ? mergeLightData(lightQuery.data) : undefined;
 
+  const lastReading = data && data.length > 0 ? data[data.length - 1] : null;
+  const lastLightValue = lastReading?.light;
+
+  const isDaytime = lastLightValue !== undefined && lastLightValue > 50;
+  const LightIcon = isDaytime ? Sun : Moon;
+  const iconColor = isDaytime ? "text-yellow-500" : "text-slate-500";
+
   return (
     <SensorChart
-      title="Ambient Light Levels"
+      title={
+        <div className="flex items-center justify-between">
+          <span>Ambient Light Levels</span>
+          {lastLightValue !== undefined && (
+            <div className="flex items-center gap-2">
+              <LightIcon className={`h-4 w-4 ${iconColor}`} />
+              <span className={`font-semibold ${iconColor}`}>
+                {lastLightValue.toFixed(0)} lux
+              </span>
+            </div>
+          )}
+        </div>
+      }
       description="Light intensity measurements in lux"
       data={data}
       lines={[

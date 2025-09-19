@@ -12,10 +12,6 @@ import {
   SensorReading,
   CalibrationData,
 } from "@/models/SensorTypes";
-import {
-  getMoistureTextColor,
-  getMoistureBgColor,
-} from "@/utils/moistureColorUtils";
 import { calculateMoisturePercent } from "@/utils/sensorUtils";
 import { TimePeriod } from "@/utils/sensorDataUtils";
 
@@ -47,15 +43,6 @@ export function IndividualPlantChart({
     chartData && chartData.length > 0 ? chartData[chartData.length - 1] : null;
   const lastMoistureValue = lastReading?.moisture;
 
-  const moistureTextColor =
-    lastMoistureValue !== undefined
-      ? getMoistureTextColor(sensorConfig.name, lastMoistureValue)
-      : "#ffffff";
-  const moistureBgColor =
-    lastMoistureValue !== undefined
-      ? getMoistureBgColor(sensorConfig.name, lastMoistureValue)
-      : "#6b7280";
-
   return (
     <SensorChart
       title={
@@ -64,17 +51,9 @@ export function IndividualPlantChart({
           {lastMoistureValue !== undefined && (
             <div className="flex items-center gap-2">
               <Droplets className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-              <div>
-                <span
-                  className="font-semibold px-2 py-1 rounded-md"
-                  style={{
-                    color: moistureTextColor,
-                    backgroundColor: moistureBgColor,
-                  }}
-                >
-                  {lastMoistureValue}%
-                </span>
-              </div>
+              <span className="font-semibold text-blue-500 dark:text-blue-400">
+                {lastMoistureValue}%
+              </span>
             </div>
           )}
         </div>
