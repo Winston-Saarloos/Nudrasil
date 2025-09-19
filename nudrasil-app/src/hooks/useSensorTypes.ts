@@ -1,24 +1,31 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchSensorTypes } from "@/controllers/sensorTypesController";
 
-export const useSensorTypes = (isEnabled: boolean = false) => {
+export const useSensorTypes = (
+  isEnabled: boolean = false,
+  adminSecret?: string,
+) => {
   const queryClient = useQueryClient();
 
   const result = useQuery({
-    queryKey: ["sensorTypes"],
+    queryKey: ["sensorTypes", adminSecret],
     queryFn: async () => {
+      if (!adminSecret) {
+        throw new Error("Admin secret is required");
+      }
+
       const adminSecretData = queryClient.getQueryData<{
         secret: string;
         isValid: boolean;
-      }>(["adminSecret"]);
+      }>(["adminSecret", adminSecret]);
 
-      if (!adminSecretData?.secret || !adminSecretData?.isValid) {
+      if (!adminSecretData?.isValid) {
         throw new Error("Valid admin secret is required");
       }
 
-      return await fetchSensorTypes(adminSecretData.secret);
+      return await fetchSensorTypes(adminSecret);
     },
-    enabled: isEnabled,
+    enabled: isEnabled && !!adminSecret,
     staleTime: 5 * 60 * 1000, // 5 minutes in ms
     retry: false,
     throwOnError: false,

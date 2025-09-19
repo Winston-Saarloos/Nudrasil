@@ -35,13 +35,13 @@ export default function DeviceConfigsAdminPage() {
     isError: configsError,
     error: configsErrorData,
     refetch: refetchConfigs,
-  } = useDeviceConfigs(secretData?.isValid || false);
+  } = useDeviceConfigs(secretData?.isValid || false, secretData?.secret);
   const {
     data: boards = [],
     isLoading: boardsLoading,
     isError: boardsError,
     error: boardsErrorData,
-  } = useBoards(secretData?.isValid || false);
+  } = useBoards(secretData?.isValid || false, secretData?.secret);
 
   const validateJson = (text: string) => {
     try {

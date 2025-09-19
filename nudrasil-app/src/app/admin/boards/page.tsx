@@ -29,7 +29,7 @@ export default function BoardsPage() {
     isError,
     error,
     refetch,
-  } = useBoards(secretData?.isValid || false);
+  } = useBoards(secretData?.isValid || false, secretData?.secret);
 
   const handleCreateBoard = async () => {
     if (!secretData?.secret || !secretData?.isValid) {

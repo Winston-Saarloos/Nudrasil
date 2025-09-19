@@ -59,9 +59,15 @@ export default function SensorsAdminPage() {
     isError: sensorsError,
     error: sensorsErrorData,
     refetch: refetchSensors,
-  } = useSensors(secretData?.isValid || false);
-  const { data: types = [] } = useSensorTypes(secretData?.isValid || false);
-  const { data: boards = [] } = useBoards(secretData?.isValid || false);
+  } = useSensors(secretData?.isValid || false, secretData?.secret);
+  const { data: types = [] } = useSensorTypes(
+    secretData?.isValid || false,
+    secretData?.secret,
+  );
+  const { data: boards = [] } = useBoards(
+    secretData?.isValid || false,
+    secretData?.secret,
+  );
 
   const handleCreateOrUpdateSensor = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
