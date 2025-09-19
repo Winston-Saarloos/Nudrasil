@@ -102,7 +102,7 @@ export function StatusList({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-3", className)}>
       {items.map((item, index) => (
         <StatusIndicator key={index} {...item} />
       ))}

@@ -128,3 +128,32 @@ export async function deleteBoard(
     throw error;
   }
 }
+
+export interface BoardStatus {
+  id: number;
+  name: string;
+  status: "healthy" | "unreachable" | "invalid-response";
+  latencyMs: number | null;
+}
+
+interface BoardStatusResponse {
+  data: BoardStatus[];
+}
+
+export async function fetchBoardStatus(): Promise<BoardStatus[]> {
+  try {
+    const request = await axiosRequest<BoardStatusResponse>({
+      method: "GET",
+      url: "/api/boards/status",
+    });
+
+    if (request.success && request.value?.data) {
+      return request.value.data;
+    }
+
+    throw new Error(request.message || "Failed to fetch board status");
+  } catch (error: unknown) {
+    console.error("Error fetching board status:", error);
+    throw error;
+  }
+}

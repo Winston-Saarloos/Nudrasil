@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TemperatureHumidityChart } from "@/components/TemperatureHumidityChart";
 import { IndividualPlantChart } from "@/components/IndividualPlantChart";
 import { LightChart } from "@/components/LightChart";
+import { BoardStatusList } from "@/components/BoardStatusList";
 import { SENSOR_CONFIGS } from "@/config/sensors";
-import { StatusList } from "@/components/ui/status-indicator";
 import {
   Select,
   SelectContent,
@@ -15,34 +15,9 @@ import {
 } from "@components/ui/select";
 import { TimePeriod, TIME_PERIOD_CONFIGS } from "@/utils/sensorDataUtils";
 
-interface BoardStatus {
-  id: number;
-  name: string;
-  status: "healthy" | "unreachable" | "invalid-response";
-  latencyMs: number | null;
-}
-
 export default function SensorPage() {
-  const [statusList, setStatusList] = useState<BoardStatus[]>([]);
   const [selectedTimePeriod, setSelectedTimePeriod] =
     useState<TimePeriod>("3days");
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      const res = await fetch("/api/boards/status");
-      const json = await res.json();
-      setStatusList(json.data);
-    };
-
-    fetchStatus();
-  }, []);
-
-  const statusItems = statusList.map((board) => ({
-    status: board.status,
-    label: board.name,
-    description: `Board ID: ${board.id}`,
-    latencyMs: board.latencyMs,
-  }));
 
   return (
     <div className="p-6 space-y-8 text-white rounded-xl shadow">
@@ -93,11 +68,7 @@ export default function SensorPage() {
 
       <LightChart showGrid={false} />
 
-      {/* Board Status */}
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-2">Board Status</h2>
-        <StatusList items={statusItems} />
-      </div>
+      <BoardStatusList />
     </div>
   );
 }
