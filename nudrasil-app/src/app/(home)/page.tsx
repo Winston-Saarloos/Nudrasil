@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { TemperatureHumidityChart } from "@/components/TemperatureHumidityChart";
-import { IndividualPlantChart } from "@/components/IndividualPlantChart";
-import { LightChart } from "@/components/LightChart";
-import { BoardStatusList } from "@/components/BoardStatusList";
+import dynamic from "next/dynamic";
+
+import { BoardStatusList } from "@components/BoardStatusList";
 import { SENSOR_CONFIGS } from "@/config/sensors";
 import {
   Select,
@@ -14,6 +13,37 @@ import {
   SelectValue,
 } from "@components/ui/select";
 import { TimePeriod, TIME_PERIOD_CONFIGS } from "@/utils/sensorDataUtils";
+import { ChartSkeleton } from "@/components/ChartSkeleton";
+
+const TemperatureHumidityChart = dynamic(
+  () =>
+    import("@components/TemperatureHumidityChart").then(
+      (module) => module.TemperatureHumidityChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton height={350} />,
+  },
+);
+
+const IndividualPlantChart = dynamic(
+  () =>
+    import("@/components/IndividualPlantChart").then(
+      (module) => module.IndividualPlantChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton height={250} />,
+  },
+);
+
+const LightChart = dynamic(
+  () => import("@/components/LightChart").then((module) => module.LightChart),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton height={300} />,
+  },
+);
 
 export default function SensorPage() {
   const [selectedTimePeriod, setSelectedTimePeriod] =
