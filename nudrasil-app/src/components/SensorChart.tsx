@@ -168,7 +168,7 @@ export function SensorChart({
   }, [chartData.length, isMobile]);
 
   const responsiveMargin = useMemo(() => {
-    const baseMargin = { top: 25, right: 20, left: 20, bottom: 0 };
+    const baseMargin = { top: 25, right: 20, left: -25, bottom: 0 };
     if (isMobile) {
       return { ...baseMargin, bottom: 20 };
     }

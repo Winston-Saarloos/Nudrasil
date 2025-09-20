@@ -16,11 +16,15 @@ import { Sheet, SheetContent, SheetTrigger } from "@components/ui/sheet";
 export default function DefaultLayout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const configItems = [
-    { href: "/admin/boards", label: "Boards", icon: Settings },
-    { href: "/admin/board-configs", label: "Board Config", icon: Settings },
-    { href: "/admin/sensors", label: "Sensors", icon: Settings },
-    { href: "/admin/sensor-types", label: "Sensor Types", icon: Settings },
+  const configItems: Array<{
+    href: string;
+    label: string;
+    icon?: React.ElementType;
+  }> = [
+    { href: "/admin/boards", label: "Boards" },
+    { href: "/admin/board-configs", label: "Board Config" },
+    { href: "/admin/sensors", label: "Sensors" },
+    { href: "/admin/sensor-types", label: "Sensor Types" },
   ];
 
   const mobileNavItems = (
@@ -42,7 +46,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
             className="justify-start"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            <Icon className="h-4 w-4 mr-2" />
+            {Icon && <Icon className="h-4 w-4 mr-2" />}
             <Link href={item.href}>{item.label}</Link>
           </Button>
         );
@@ -86,7 +90,7 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
                         href={item.href}
                         className="flex items-center gap-2"
                       >
-                        <Icon className="h-4 w-4" />
+                        {Icon && <Icon className="h-4 w-4" />}
                         {item.label}
                       </Link>
                     </DropdownMenuItem>
