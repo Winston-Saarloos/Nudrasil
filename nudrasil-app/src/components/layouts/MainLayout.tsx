@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ReactNode, useState } from "react";
-import { Menu, Home, Settings, Leaf, ChevronDown } from "lucide-react";
+import { Menu, Home, Settings, Leaf, ChevronDown, Github } from "lucide-react";
 
 import { DialogTitle } from "@components/ui/dialog";
 import {
@@ -34,11 +34,23 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
         className="justify-start"
         onClick={() => setIsMobileMenuOpen(false)}
       >
-        <Home className="h-4 w-4 mr-2" />
+        <Home className="h-4 w-4" />
         <Link href="/">Dashboard</Link>
       </Button>
+
+      <Button
+        variant="ghost"
+        className="justify-start"
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <Link className="ml-5" href="/about">
+          About
+        </Link>
+      </Button>
+
+      <hr />
+
       {configItems.map((item) => {
-        const Icon = item.icon;
         return (
           <Button
             key={item.href}
@@ -46,11 +58,29 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
             className="justify-start"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            {Icon && <Icon className="h-4 w-4 mr-2" />}
+            <Settings className="h-4 w-4" />
+
             <Link href={item.href}>{item.label}</Link>
           </Button>
         );
       })}
+
+      <Button
+        variant="outline"
+        className="justify-start mr-5"
+        asChild
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <a
+          href="https://github.com/Winston-Saarloos/Nudrasil"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center"
+        >
+          <Github className="mr-2 h-5 w-5" />
+          GitHub
+        </a>
+      </Button>
     </>
   );
 
@@ -61,15 +91,22 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <Leaf className="h-6 w-6 text-green-600" />
-            <span className="text-xl font-bold">Plant Monitor</span>
+            <Link href="/" className="text-xl font-bold">
+              Plant Monitor
+            </Link>
           </div>
 
           {/* desktop navigation */}
           <nav className="hidden md:flex items-center gap-1">
             <Button variant="ghost" asChild>
               <Link href="/" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
                 Dashboard
+              </Link>
+            </Button>
+
+            <Button variant="ghost" asChild>
+              <Link href="/about" className="flex items-center gap-2">
+                About
               </Link>
             </Button>
 
@@ -98,6 +135,17 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button variant="outline" size="lg" asChild>
+              <a
+                href="https://github.com/Winston-Saarloos/Nudrasil"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Github className="mr-2 h-5 w-5" />
+                GitHub
+              </a>
+            </Button>
           </nav>
 
           {/* mobile menu */}

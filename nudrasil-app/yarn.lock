@@ -1603,7 +1603,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@radix-ui/react-slot@npm:1.2.0, @radix-ui/react-slot@npm:^1.2.0":
+"@radix-ui/react-slot@npm:1.2.0":
   version: 1.2.0
   resolution: "@radix-ui/react-slot@npm:1.2.0"
   dependencies:
@@ -1618,7 +1618,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@radix-ui/react-slot@npm:1.2.3":
+"@radix-ui/react-slot@npm:1.2.3, @radix-ui/react-slot@npm:^1.2.3":
   version: 1.2.3
   resolution: "@radix-ui/react-slot@npm:1.2.3"
   dependencies:
@@ -5780,7 +5780,7 @@ __metadata:
     "@radix-ui/react-dialog": "npm:^1.1.11"
     "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
     "@radix-ui/react-select": "npm:^2.2.2"
-    "@radix-ui/react-slot": "npm:^1.2.0"
+    "@radix-ui/react-slot": "npm:^1.2.3"
     "@tailwindcss/postcss": "npm:^4"
     "@tanstack/react-query": "npm:^5.87.4"
     "@tanstack/react-query-devtools": "npm:^5.87.4"
