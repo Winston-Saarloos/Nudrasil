@@ -109,7 +109,23 @@ void fetchServerConfig() {
     return;
   }
   
-  JsonObject env = doc[0]["config"]["environments"][doc[0]["config"]["defaultEnv"] | "prod"];
+  if (!doc["success"].as<bool>()) {
+    debug("Config fetch returned success: false");
+    http.end();
+    return;
+  }
+  
+  JsonArray dataArray = doc["value"]["data"];
+  if (dataArray.size() == 0) {
+    debug("No device config data found");
+    http.end();
+    return;
+  }
+  
+  JsonObject deviceConfig = dataArray[0]["config"];
+  String defaultEnv = deviceConfig["defaultEnv"] | "prod";
+  JsonObject env = deviceConfig["environments"][defaultEnv];
+  
   serverIp = env["ip"].as<String>();
   serverPort = env["port"].as<int>();
   
