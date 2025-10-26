@@ -9,7 +9,7 @@ export function BoardStatusList() {
 
   if (isLoading) {
     return (
-      <div className="p-4">
+      <div>
         <h2 className="text-xl font-semibold mb-2">Board Status</h2>
         <div className="text-sm text-gray-400">Loading board status...</div>
       </div>
@@ -18,7 +18,7 @@ export function BoardStatusList() {
 
   if (error) {
     return (
-      <div className="p-4">
+      <div>
         <h2 className="text-xl font-semibold mb-2">Board Status</h2>
         <div className="text-sm text-red-400">
           Error loading board status: {error.message}
@@ -29,7 +29,7 @@ export function BoardStatusList() {
 
   if (!boardStatusList || boardStatusList.length === 0) {
     return (
-      <div className="p-4">
+      <div>
         <h2 className="text-xl font-semibold mb-2">Board Status</h2>
         <div className="text-sm text-gray-400">No boards found</div>
       </div>
@@ -44,7 +44,7 @@ export function BoardStatusList() {
   }));
 
   return (
-    <div className="p-4">
+    <div>
       <h2 className="text-xl font-semibold mb-2">Board Status</h2>
       <StatusList items={statusItems} />
     </div>

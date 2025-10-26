@@ -4,6 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 
 import { BoardStatusList } from "@components/BoardStatusList";
+import { LastReadingIndicator } from "@components/LastReadingIndicator";
 import { SENSOR_CONFIGS } from "@/config/sensors";
 import {
   Select,
@@ -54,10 +55,11 @@ export default function SensorPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Plant Soil Moisture</h2>
+            <h2 className="text-xl font-semibold">Soil Moisture</h2>
             <p className="text-sm text-gray-400">
               Data updates every 10 minutes. Charts refresh every 30 seconds.
             </p>
+            <LastReadingIndicator />
           </div>
           <Select
             value={selectedTimePeriod}
