@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -9,6 +9,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
+  ReferenceLine,
 } from "recharts";
 import { DateTime } from "luxon";
 
@@ -26,6 +28,7 @@ import {
 } from "@/utils/sensorDataUtils";
 import { calculateMoisturePercent } from "@/utils/sensorUtils";
 import { useBreakpointDown } from "@/hooks/useBreakpoint";
+import { PlantZones } from "@/config/plantZones";
 
 export interface ChartLine {
   key: string;
@@ -33,6 +36,13 @@ export interface ChartLine {
   name: string;
   strokeWidth?: number;
   fill?: string;
+}
+
+export interface ZoneArea {
+  y1: number;
+  y2: number;
+  fill: string;
+  fillOpacity: number;
 }
 
 interface SensorChartProps {
@@ -50,6 +60,8 @@ interface SensorChartProps {
   isLoading?: boolean;
   error?: Error | null;
   selectedTimePeriod?: TimePeriod;
+  zones?: PlantZones;
+  externalHoverState?: boolean;
 }
 
 const CustomTooltip = ({
@@ -124,8 +136,16 @@ export function SensorChart({
   isLoading = false,
   error = null,
   selectedTimePeriod = "1day",
+  zones,
+  externalHoverState,
 }: SensorChartProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const isMobile = useBreakpointDown("md");
+
+  const effectiveHoverState =
+    externalHoverState !== undefined
+      ? externalHoverState || isHovered
+      : isHovered;
 
   const processedData = useMemo(() => {
     if (rawSensorData && rawSensorData.length > 0) {
@@ -195,6 +215,88 @@ export function SensorChart({
 
   const yAxisTickFormatter = (value: string | number) => String(value);
 
+  // Moisture Zones
+  const baseOpacity = 0;
+  const hoverOpacity = 0.15;
+  const currentOpacity = effectiveHoverState ? hoverOpacity : baseOpacity;
+
+  // Generate zone areas and boundary lines
+  const { zoneAreas, zoneBoundaries } = useMemo(() => {
+    if (!zones || !yAxisDomain) return { zoneAreas: [], zoneBoundaries: [] };
+
+    const areas: ZoneArea[] = [];
+    const boundaries: Array<{ y: number; color: string; label?: string }> = [];
+    const [yMin, yMax] = yAxisDomain;
+
+    if (zones.red.range_low) {
+      const y1 = Math.max(zones.red.range_low[0], yMin);
+      const y2 = Math.min(zones.red.range_low[1], yMax);
+      areas.push({
+        y1,
+        y2,
+        fill: "#f87171",
+        fillOpacity: currentOpacity,
+      });
+    }
+    if (zones.red.range_high) {
+      const y1 = Math.max(zones.red.range_high[0], yMin);
+      const y2 = Math.min(zones.red.range_high[1], yMax);
+      areas.push({
+        y1,
+        y2,
+        fill: "#f87171",
+        fillOpacity: currentOpacity,
+      });
+    }
+
+    if (zones.yellow.range_low) {
+      const y1 = Math.max(zones.yellow.range_low[0], yMin);
+      const y2 = Math.min(zones.yellow.range_low[1], yMax);
+      areas.push({
+        y1,
+        y2,
+        fill: "#facc15",
+        fillOpacity: currentOpacity,
+      });
+    }
+    if (zones.yellow.range_high) {
+      const y1 = Math.max(zones.yellow.range_high[0], yMin);
+      const y2 = Math.min(zones.yellow.range_high[1], yMax);
+      areas.push({
+        y1,
+        y2,
+        fill: "#facc15",
+        fillOpacity: currentOpacity,
+      });
+    }
+
+    if (zones.green.range) {
+      const y1 = Math.max(zones.green.range[0], yMin);
+      const y2 = Math.min(zones.green.range[1], yMax);
+      areas.push({
+        y1,
+        y2,
+        fill: "#4ade80",
+        fillOpacity: currentOpacity,
+      });
+
+      if (effectiveHoverState) {
+        boundaries.push({
+          y: y1,
+          color: "#4ade80",
+          label: `${y1}%`,
+        });
+        boundaries.push({
+          y: y2,
+          color: "#4ade80",
+          label: `${y2}%`,
+        });
+      }
+    }
+
+    return { zoneAreas: areas, zoneBoundaries: boundaries };
+  }, [zones, yAxisDomain, currentOpacity, effectiveHoverState]);
+
   if (isLoading) {
     return (
       <Card className={cn("w-full", className)}>
@@ -260,54 +362,94 @@ export function SensorChart({
         )}
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={chartData} margin={responsiveMargin}>
-            {showGrid && <CartesianGrid {...gridProps} />}
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={xAxisTickFormatter}
-              stroke="#6b7280"
-              fontSize={isMobile ? 10 : 12}
-              tick={{
-                dy: 4,
-                textAnchor: "middle",
-                fontSize: isMobile ? 10 : 12,
-              }}
-              tickLine={{ stroke: "#6b7280" }}
-              interval={xAxisInterval}
-              minTickGap={isMobile ? 20 : 10}
-              textAnchor={isMobile ? "end" : "middle"}
-            />
-            <YAxis
-              domain={yAxisDomain}
-              tickFormatter={yAxisTickFormatter}
-              stroke="#6b7280"
-              fontSize={12}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {showLegend && (
-              <Legend
-                wrapperStyle={{
-                  paddingTop: "20px",
-                  fontSize: "14px",
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <ResponsiveContainer width="100%" height={height}>
+            <LineChart data={chartData} margin={responsiveMargin}>
+              {showGrid && <CartesianGrid {...gridProps} />}
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={xAxisTickFormatter}
+                stroke="#6b7280"
+                fontSize={isMobile ? 10 : 12}
+                tick={{
+                  dy: 4,
+                  textAnchor: "middle",
+                  fontSize: isMobile ? 10 : 12,
                 }}
+                tickLine={{ stroke: "#6b7280" }}
+                interval={xAxisInterval}
+                minTickGap={isMobile ? 20 : 10}
+                textAnchor={isMobile ? "end" : "middle"}
               />
-            )}
-            <DayBoundaryIndicator data={chartData} />
-            {lines.map((line) => (
-              <Line
-                key={line.key}
-                type="monotone"
-                dataKey={line.key}
-                stroke={line.color}
-                strokeWidth={line.strokeWidth || 2}
-                fill={line.fill}
-                dot={false}
-                activeDot={{ r: 4, stroke: line.color, strokeWidth: 2 }}
+              <YAxis
+                domain={yAxisDomain}
+                tickFormatter={yAxisTickFormatter}
+                stroke="#6b7280"
+                fontSize={12}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <Tooltip content={<CustomTooltip />} />
+              {showLegend && (
+                <Legend
+                  wrapperStyle={{
+                    paddingTop: "20px",
+                    fontSize: "14px",
+                  }}
+                />
+              )}
+              <DayBoundaryIndicator data={chartData} />
+              {/* Zone background areas */}
+              {zoneAreas.map((area, index) => (
+                <ReferenceArea
+                  key={`zone-${index}`}
+                  y1={area.y1}
+                  y2={area.y2}
+                  fill={area.fill}
+                  fillOpacity={area.fillOpacity}
+                  ifOverflow="extendDomain"
+                  stroke="none"
+                />
+              ))}
+              {/* Zone boundary lines - only show when hovered */}
+              {zoneBoundaries.map((boundary, index) => (
+                <ReferenceLine
+                  key={`boundary-${index}`}
+                  y={boundary.y}
+                  stroke={boundary.color}
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  strokeOpacity={effectiveHoverState ? 0.6 : 0}
+                  label={
+                    boundary.label
+                      ? {
+                          value: boundary.label,
+                          position: "right" as const,
+                          fill: boundary.color,
+                          fontSize: 10,
+                          fontWeight: 500,
+                          offset: 1,
+                        }
+                      : undefined
+                  }
+                />
+              ))}
+              {lines.map((line) => (
+                <Line
+                  key={line.key}
+                  type="monotone"
+                  dataKey={line.key}
+                  stroke={line.color}
+                  strokeWidth={line.strokeWidth || 2}
+                  fill={line.fill}
+                  dot={false}
+                  activeDot={{ r: 4, stroke: line.color, strokeWidth: 2 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

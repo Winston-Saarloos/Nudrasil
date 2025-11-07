@@ -1,3 +1,5 @@
+import { PlantType } from "./plantZones";
+
 export interface SensorConfig {
   id: number;
   name: string;
@@ -6,6 +8,7 @@ export interface SensorConfig {
   description: string;
   color: string;
   conversion?: (value: number) => number;
+  plantType?: PlantType; // Only for soil sensors
 }
 
 export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
@@ -42,6 +45,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     unit: "%",
     description: "Soil moisture for Spider Plant 1",
     color: "#06b6d4", // Cyan-500
+    plantType: PlantType.SPIDER_PLANT,
   },
   soil2: {
     id: 9,
@@ -50,6 +54,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     unit: "%",
     description: "Soil moisture for Spider Plant 2",
     color: "#8b5cf6", // Violet-500
+    plantType: PlantType.SPIDER_PLANT,
   },
   soil3: {
     id: 10,
@@ -58,6 +63,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     unit: "%",
     description: "Soil moisture for Devil's Ivy",
     color: "#10b981", // Emerald-500
+    plantType: PlantType.DEVILS_IVY,
   },
 };
 
