@@ -13,6 +13,7 @@ import {
 } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useDeviceConfigs } from "@hooks/useDeviceConfigs";
 import { useBoards } from "@hooks/useBoards";
 import {
@@ -25,8 +26,8 @@ export default function DeviceConfigsAdminPage() {
   const [newDeviceId, setNewDeviceId] = useState("");
   const [newConfig, setNewConfig] = useState("{}");
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [secret, setSecret] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
   const {
@@ -134,7 +135,7 @@ export default function DeviceConfigsAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Device Configs Admin</h1>
 
-      <AdminSecretInput onSecretChange={setSecret} />
+      <AdminSecretInput />
 
       {secretData?.isValid && (
         <>

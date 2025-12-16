@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { Input } from "@components/ui/input";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useSensors } from "@hooks/useSensors";
 import { useSensorTypes } from "@hooks/useSensorTypes";
 import { useBoards } from "@hooks/useBoards";
@@ -49,8 +50,8 @@ export default function SensorsAdminPage() {
     boardId: "",
   });
   const [editingSensorId, setEditingSensorId] = useState<number | null>(null);
-  const [secret, setSecret] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
   const {
@@ -144,7 +145,7 @@ export default function SensorsAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Sensors Admin</h1>
 
-      <AdminSecretInput onSecretChange={setSecret} />
+      <AdminSecretInput />
 
       {secretData?.isValid && (
         <>

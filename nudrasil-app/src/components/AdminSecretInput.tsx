@@ -1,21 +1,12 @@
 "use client";
 
-import { useState } from "react";
-
 import { Input } from "@components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useAdminSecret } from "@hooks/useAdminSecret";
 
-interface AdminSecretInputProps {
-  onSecretChange: (secret: string) => void;
-  className?: string;
-}
-
-export default function AdminSecretInput({
-  onSecretChange,
-  className = "",
-}: AdminSecretInputProps) {
-  const [secret, setSecret] = useState("");
+export default function AdminSecretInput() {
+  const { secret, setSecret } = useAdminSecret();
   const {
     data: secretData,
     isLoading: isValidatingSecret,
@@ -25,11 +16,10 @@ export default function AdminSecretInput({
 
   const handleSecretChange = (value: string) => {
     setSecret(value);
-    onSecretChange(value);
   };
 
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader>
         <CardTitle>Admin Access</CardTitle>
       </CardHeader>

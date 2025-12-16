@@ -8,6 +8,7 @@ import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useBoards } from "@hooks/useBoards";
 import {
   createBoard,
@@ -20,7 +21,7 @@ export default function BoardsPage() {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
-  const [secret, setSecret] = useState("");
+  const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
   const {
@@ -96,7 +97,7 @@ export default function BoardsPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Boards Admin</h1>
 
-      <AdminSecretInput onSecretChange={setSecret} />
+      <AdminSecretInput />
 
       {secretData?.isValid && (
         <>

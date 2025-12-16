@@ -6,6 +6,7 @@ import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
+import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useSensorTypes } from "@hooks/useSensorTypes";
 import {
   createSensorType,
@@ -14,8 +15,8 @@ import {
 
 export default function SensorTypesAdminPage() {
   const [newTypeName, setNewTypeName] = useState("");
-  const [secret, setSecret] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
   const {
@@ -66,7 +67,7 @@ export default function SensorTypesAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Sensor Types Admin</h1>
 
-      <AdminSecretInput onSecretChange={setSecret} />
+      <AdminSecretInput />
 
       {secretData?.isValid && (
         <>
