@@ -62,3 +62,6 @@ Desktop.ini
 
 # Firmware secrets
 firmware/**/src/secrets.h
+firmware/esp-dht22-sensor/src/secrets_common.h
+firmware/esp-dht22-sensor/src/secrets_board3.h
+firmware/esp-dht22-sensor/src/secrets_board5.h
