@@ -10,14 +10,32 @@ import { Thermometer, Droplets } from "lucide-react";
 interface TemperatureHumidityChartProps {
   className?: string;
   showGrid?: boolean;
+  location?: "downstairs" | "upstairs";
+  tempSensorId?: number;
+  humiditySensorId?: number;
+  title?: string;
 }
 
 export function TemperatureHumidityChart({
   className,
   showGrid = true,
+  location = "downstairs",
+  tempSensorId,
+  humiditySensorId,
+  title,
 }: TemperatureHumidityChartProps) {
-  const tempQuery = useSensorData(SENSOR_CONFIGS.temperature.id);
-  const humidityQuery = useSensorData(SENSOR_CONFIGS.humidity.id);
+  // Use provided IDs or default to downstairs sensors
+  const tempId = tempSensorId ?? 
+    (location === "upstairs" 
+      ? SENSOR_CONFIGS.temperatureUpstairs.id 
+      : SENSOR_CONFIGS.temperature.id);
+  const humidityId = humiditySensorId ?? 
+    (location === "upstairs" 
+      ? SENSOR_CONFIGS.humidityUpstairs.id 
+      : SENSOR_CONFIGS.humidity.id);
+
+  const tempQuery = useSensorData(tempId);
+  const humidityQuery = useSensorData(humidityId);
 
   const isLoading = tempQuery.isLoading || humidityQuery.isLoading;
   const error = tempQuery.error || humidityQuery.error;
@@ -31,11 +49,16 @@ export function TemperatureHumidityChart({
   const lastTempValue = lastReading?.temp;
   const lastHumidityValue = lastReading?.humidity;
 
+  const displayTitle = title ?? 
+    (location === "upstairs" 
+      ? "Upstairs Temperature & Humidity" 
+      : "Downstairs Temperature & Humidity");
+
   return (
     <SensorChart
       title={
         <div className="flex items-center justify-between">
-          <span>Ambient Temperature & Humidity</span>
+          <span>{displayTitle}</span>
           {(lastTempValue !== undefined || lastHumidityValue !== undefined) && (
             <div className="flex items-center gap-3">
               {lastTempValue !== undefined && (

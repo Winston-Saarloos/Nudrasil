@@ -17,7 +17,7 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     name: "Temperature",
     type: "temperature",
     unit: "°F",
-    description: "Ambient temperature",
+    description: "Ambient temperature (downstairs)",
     color: "#ef4444", // Red-500
     conversion: (value: number) => (value * 9) / 5 + 32, // Convert Celsius to Fahrenheit
   },
@@ -26,8 +26,25 @@ export const SENSOR_CONFIGS: Record<string, SensorConfig> = {
     name: "Humidity",
     type: "humidity",
     unit: "%",
-    description: "Relative humidity",
+    description: "Relative humidity (downstairs)",
     color: "#3b82f6", // Blue-500
+  },
+  temperatureUpstairs: {
+    id: 12,
+    name: "Temperature (Upstairs)",
+    type: "temperature",
+    unit: "°F",
+    description: "Ambient temperature (upstairs)",
+    color: "#f87171", // Red-400
+    conversion: (value: number) => (value * 9) / 5 + 32, // Convert Celsius to Fahrenheit
+  },
+  humidityUpstairs: {
+    id: 11,
+    name: "Humidity (Upstairs)",
+    type: "humidity",
+    unit: "%",
+    description: "Relative humidity (upstairs)",
+    color: "#60a5fa", // Blue-400
   },
   light: {
     id: 4,
