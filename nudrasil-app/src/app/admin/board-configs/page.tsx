@@ -38,7 +38,7 @@ export default function DeviceConfigsAdminPage() {
     isError: configsError,
     error: configsErrorData,
     refetch: refetchConfigs,
-  } = useDeviceConfigs(secretData?.isValid || false, secretData?.secret);
+  } = useDeviceConfigs();
   const {
     data: boards = [],
     isLoading: boardsLoading,

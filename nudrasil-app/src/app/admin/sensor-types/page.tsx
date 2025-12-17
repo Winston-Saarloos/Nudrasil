@@ -27,7 +27,7 @@ export default function SensorTypesAdminPage() {
     isError,
     error,
     refetch,
-  } = useSensorTypes(secretData?.isValid || false, secretData?.secret);
+  } = useSensorTypes();
 
   const handleCreateType = async () => {
     if (!secretData?.secret || !secretData?.isValid) {

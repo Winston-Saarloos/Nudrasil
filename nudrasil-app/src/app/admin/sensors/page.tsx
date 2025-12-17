@@ -62,11 +62,8 @@ export default function SensorsAdminPage() {
     isError: sensorsError,
     error: sensorsErrorData,
     refetch: refetchSensors,
-  } = useSensors(secretData?.isValid || false, secretData?.secret);
-  const { data: types = [] } = useSensorTypes(
-    secretData?.isValid || false,
-    secretData?.secret,
-  );
+  } = useSensors();
+  const { data: types = [] } = useSensorTypes();
   const { data: boards = [] } = useBoards();
 
   const handleCreateOrUpdateSensor = async () => {
@@ -253,7 +250,11 @@ export default function SensorsAdminPage() {
               {editingSensorId ? "Update Sensor" : "Add Sensor"}
             </Button>
             {editingSensorId && (
-              <Button variant="outline" onClick={cancelEditing} disabled={isReadOnly}>
+              <Button
+                variant="outline"
+                onClick={cancelEditing}
+                disabled={isReadOnly}
+              >
                 Cancel
               </Button>
             )}
@@ -299,8 +300,7 @@ export default function SensorsAdminPage() {
                         Type ID: {sensor.typeId}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Calibrated Range:{" "}
-                        {sensor.minCalibratedValue ?? "??"} to{" "}
+                        Calibrated Range: {sensor.minCalibratedValue ?? "??"} to{" "}
                         {sensor.maxCalibratedValue ?? "??"}
                       </p>
                     </div>
