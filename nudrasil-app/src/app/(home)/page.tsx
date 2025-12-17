@@ -97,14 +97,8 @@ export default function SensorPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TemperatureHumidityChart 
-          showGrid={false} 
-          location="downstairs"
-        />
-        <TemperatureHumidityChart 
-          showGrid={false} 
-          location="upstairs"
-        />
+        <TemperatureHumidityChart showGrid={false} location="downstairs" />
+        <TemperatureHumidityChart showGrid={false} location="upstairs" />
       </div>
 
       <LightChart showGrid={false} />

@@ -25,13 +25,15 @@ export function TemperatureHumidityChart({
   title,
 }: TemperatureHumidityChartProps) {
   // Use provided IDs or default to downstairs sensors
-  const tempId = tempSensorId ?? 
-    (location === "upstairs" 
-      ? SENSOR_CONFIGS.temperatureUpstairs.id 
+  const tempId =
+    tempSensorId ??
+    (location === "upstairs"
+      ? SENSOR_CONFIGS.temperatureUpstairs.id
       : SENSOR_CONFIGS.temperature.id);
-  const humidityId = humiditySensorId ?? 
-    (location === "upstairs" 
-      ? SENSOR_CONFIGS.humidityUpstairs.id 
+  const humidityId =
+    humiditySensorId ??
+    (location === "upstairs"
+      ? SENSOR_CONFIGS.humidityUpstairs.id
       : SENSOR_CONFIGS.humidity.id);
 
   const tempQuery = useSensorData(tempId);
@@ -49,9 +51,10 @@ export function TemperatureHumidityChart({
   const lastTempValue = lastReading?.temp;
   const lastHumidityValue = lastReading?.humidity;
 
-  const displayTitle = title ?? 
-    (location === "upstairs" 
-      ? "Upstairs Temperature & Humidity" 
+  const displayTitle =
+    title ??
+    (location === "upstairs"
+      ? "Upstairs Temperature & Humidity"
       : "Downstairs Temperature & Humidity");
 
   return (

@@ -5,6 +5,7 @@ import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
+import ReadOnlyAlert from "@components/ReadOnlyAlert";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useSensorTypes } from "@hooks/useSensorTypes";
@@ -19,6 +20,7 @@ export default function SensorTypesAdminPage() {
   const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const isReadOnly = !secretData?.isValid;
   const {
     data: sensorTypes = [],
     isLoading,
@@ -69,80 +71,80 @@ export default function SensorTypesAdminPage() {
 
       <AdminSecretInput />
 
-      {secretData?.isValid && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Sensor Type</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newTypeName}
-                  onChange={(e) => setNewTypeName(e.target.value)}
-                  placeholder="New Type Name"
-                  className="max-w-md"
-                />
-                <Button
-                  onClick={handleCreateType}
-                  disabled={!newTypeName.trim()}
-                >
-                  Add Type
-                </Button>
-              </div>
-              {status && (
-                <p
-                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
-                >
-                  {status}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+      {isReadOnly && <ReadOnlyAlert />}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing Sensor Types</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading sensor types...</p>
-              ) : isError ? (
-                <p className="text-red-600">
-                  Error loading sensor types:{" "}
-                  {error instanceof Error ? error.message : "Unknown error"}
-                </p>
-              ) : sensorTypes && sensorTypes.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {sensorTypes.map((type) => (
-                    <Card key={type.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <h3 className="font-semibold">{type.name}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              ID: {type.id}
-                            </p>
-                          </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteType(type.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No sensor types found.</p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Sensor Type</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newTypeName}
+              onChange={(e) => setNewTypeName(e.target.value)}
+              placeholder="New Type Name"
+              className="max-w-md"
+              disabled={isReadOnly}
+            />
+            <Button
+              onClick={handleCreateType}
+              disabled={isReadOnly || !newTypeName.trim()}
+            >
+              Add Type
+            </Button>
+          </div>
+          {status && (
+            <p
+              className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+            >
+              {status}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Existing Sensor Types</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-muted-foreground">Loading sensor types...</p>
+          ) : isError ? (
+            <p className="text-red-600">
+              Error loading sensor types:{" "}
+              {error instanceof Error ? error.message : "Unknown error"}
+            </p>
+          ) : sensorTypes && sensorTypes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sensorTypes.map((type) => (
+                <Card key={type.id}>
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold">{type.name}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          ID: {type.id}
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteType(type.id)}
+                        disabled={isReadOnly}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No sensor types found.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

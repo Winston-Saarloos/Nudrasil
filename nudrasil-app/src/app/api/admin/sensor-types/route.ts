@@ -10,9 +10,8 @@ import {
 } from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
+  // Allow read-only access without authentication
   try {
-    await verifyAdminSecret(req);
-
     const types = await db
       .select({
         id: sensorTypes.id,
@@ -22,9 +21,6 @@ export async function GET(req: NextRequest) {
 
     return createApiResponse({ data: types });
   } catch (err) {
-    if (err instanceof Error && err.message === "Unauthorized") {
-      return createUnauthorizedResponse();
-    }
     console.error("GET /api/admin/sensor-types error:", err);
     return createApiError("Internal server error", 500);
   }

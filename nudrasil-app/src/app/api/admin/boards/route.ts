@@ -10,14 +10,14 @@ import {
   createUnauthorizedResponse,
 } from "@/utils/apiResponse";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
+  // Allow read-only access without authentication
   try {
-    await verifyAdminSecret(req);
-
     const data = await db.select().from(boards).orderBy(boards.id);
     return createApiResponse({ data });
-  } catch {
-    return createUnauthorizedResponse();
+  } catch (error) {
+    console.error("Error fetching boards:", error);
+    return createApiError("Failed to fetch boards", 500);
   }
 }
 

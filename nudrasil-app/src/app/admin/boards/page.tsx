@@ -7,6 +7,7 @@ import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
+import ReadOnlyAlert from "@components/ReadOnlyAlert";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useBoards } from "@hooks/useBoards";
@@ -24,13 +25,14 @@ export default function BoardsPage() {
   const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const isReadOnly = !secretData?.isValid;
   const {
     data: boards = [],
     isLoading,
     isError,
     error,
     refetch,
-  } = useBoards(secretData?.isValid || false, secretData?.secret);
+  } = useBoards();
 
   const handleCreateBoard = async () => {
     if (!secretData?.secret || !secretData?.isValid) {
@@ -99,114 +101,115 @@ export default function BoardsPage() {
 
       <AdminSecretInput />
 
-      {secretData?.isValid && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {editId ? "Edit Board" : "Create New Board"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  placeholder="Board Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <Input
-                  placeholder="Location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={editId ? handleUpdateBoard : handleCreateBoard}
-                  disabled={!name.trim() || !location.trim()}
-                >
-                  {editId ? "Update Board" : "Create Board"}
-                </Button>
-                {editId && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditId(null);
-                      setName("");
-                      setLocation("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
-              {status && (
-                <p
-                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
-                >
-                  {status}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+      {isReadOnly && <ReadOnlyAlert />}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing Boards</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading boards...</p>
-              ) : isError ? (
-                <p className="text-red-600">
-                  Error loading boards:{" "}
-                  {error instanceof Error ? error.message : "Unknown error"}
-                </p>
-              ) : boards.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {boards.map((board) => (
-                    <Card key={board.id}>
-                      <CardContent className="pt-6">
-                        <div className="space-y-2">
-                          <h3 className="font-semibold">{board.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Location: {board.location}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            ID: {board.id}
-                          </p>
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => startEdit(board)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm(`Delete board "${board.name}"?`)) {
-                                handleDeleteBoard(board.id);
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No boards found.</p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>{editId ? "Edit Board" : "Create New Board"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              placeholder="Board Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isReadOnly}
+            />
+            <Input
+              placeholder="Location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={editId ? handleUpdateBoard : handleCreateBoard}
+              disabled={isReadOnly || !name.trim() || !location.trim()}
+            >
+              {editId ? "Update Board" : "Create Board"}
+            </Button>
+            {editId && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditId(null);
+                  setName("");
+                  setLocation("");
+                }}
+                disabled={isReadOnly}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+          {status && (
+            <p
+              className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+            >
+              {status}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Existing Boards</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-muted-foreground">Loading boards...</p>
+          ) : isError ? (
+            <p className="text-red-600">
+              Error loading boards:{" "}
+              {error instanceof Error ? error.message : "Unknown error"}
+            </p>
+          ) : boards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {boards.map((board) => (
+                <Card key={board.id}>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">{board.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Location: {board.location}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {board.id}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => startEdit(board)}
+                        disabled={isReadOnly}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Delete board "${board.name}"?`)) {
+                            handleDeleteBoard(board.id);
+                          }
+                        }}
+                        disabled={isReadOnly}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No boards found.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

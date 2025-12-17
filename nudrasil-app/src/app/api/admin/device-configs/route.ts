@@ -10,12 +10,7 @@ import {
 } from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
-  try {
-    await verifyAdminSecret(req);
-  } catch (error) {
-    return createUnauthorizedResponse();
-  }
-
+  // Allow read-only access without authentication
   try {
     const url = new URL(req.url);
     const deviceId = url.searchParams.get("deviceId");

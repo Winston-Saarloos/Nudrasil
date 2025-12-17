@@ -12,6 +12,7 @@ import {
   CardFooter,
 } from "@components/ui/card";
 import AdminSecretInput from "@components/AdminSecretInput";
+import ReadOnlyAlert from "@components/ReadOnlyAlert";
 import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
 import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useDeviceConfigs } from "@hooks/useDeviceConfigs";
@@ -30,6 +31,7 @@ export default function DeviceConfigsAdminPage() {
   const { secret } = useAdminSecret();
 
   const { data: secretData } = useAdminSecretValidation(secret);
+  const isReadOnly = !secretData?.isValid;
   const {
     data: configs = [],
     isLoading: configsLoading,
@@ -42,7 +44,7 @@ export default function DeviceConfigsAdminPage() {
     isLoading: boardsLoading,
     isError: boardsError,
     error: boardsErrorData,
-  } = useBoards(secretData?.isValid || false, secretData?.secret);
+  } = useBoards();
 
   const validateJson = (text: string) => {
     try {
@@ -137,141 +139,151 @@ export default function DeviceConfigsAdminPage() {
 
       <AdminSecretInput />
 
-      {secretData?.isValid && (
-        <>
-          {configsLoading ? (
-            <p className="text-muted-foreground">Loading device configs...</p>
-          ) : configsError ? (
+      {isReadOnly && <ReadOnlyAlert />}
+
+      {configsLoading ? (
+        <p className="text-muted-foreground">Loading device configs...</p>
+      ) : configsError ? (
+        <p className="text-red-600">
+          Error loading device configs:{" "}
+          {configsErrorData instanceof Error
+            ? configsErrorData.message
+            : "Unknown error"}
+        </p>
+      ) : configs && configs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {configs.map((config) => (
+            <Card key={config.id}>
+              <CardHeader>
+                <CardTitle>{config.device_id}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={JSON.stringify(config.config, null, 2)}
+                  rows={10}
+                  onChange={(e) => {
+                    JSON.parse(e.target.value);
+                  }}
+                  disabled={isReadOnly}
+                  readOnly={isReadOnly}
+                />
+              </CardContent>
+              <CardFooter className="flex gap-2">
+                <Button
+                  onClick={() => handleUpdateConfig(config.id, config.config)}
+                  disabled={isReadOnly}
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteConfig(config.id)}
+                  disabled={isReadOnly}
+                >
+                  Delete
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">No device configs found.</p>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Config</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            placeholder="Device ID (e.g., ESP001)"
+            value={newDeviceId}
+            onChange={(e) => setNewDeviceId(e.target.value)}
+            className="max-w-md"
+            disabled={isReadOnly}
+          />
+          <Textarea
+            className="font-mono"
+            placeholder="New Config JSON"
+            rows={10}
+            value={newConfig}
+            onChange={(e) => {
+              setNewConfig(e.target.value);
+              validateJson(e.target.value);
+            }}
+            disabled={isReadOnly}
+            readOnly={isReadOnly}
+          />
+          {jsonError && <p className="text-red-500 text-sm">{jsonError}</p>}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleCreateConfig}
+              disabled={
+                isReadOnly ||
+                !newDeviceId.trim() ||
+                !newConfig.trim() ||
+                !!jsonError
+              }
+            >
+              Create Config
+            </Button>
+            <Button
+              variant="outline"
+              onClick={formatJson}
+              disabled={isReadOnly}
+            >
+              Format JSON
+            </Button>
+          </div>
+          {status && (
+            <p
+              className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
+            >
+              {status}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Boards</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {boardsLoading ? (
+            <p className="text-muted-foreground">Loading boards...</p>
+          ) : boardsError ? (
             <p className="text-red-600">
-              Error loading device configs:{" "}
-              {configsErrorData instanceof Error
-                ? configsErrorData.message
+              Error loading boards:{" "}
+              {boardsErrorData instanceof Error
+                ? boardsErrorData.message
                 : "Unknown error"}
             </p>
-          ) : configs && configs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {configs.map((config) => (
-                <Card key={config.id}>
-                  <CardHeader>
-                    <CardTitle>{config.device_id}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={JSON.stringify(config.config, null, 2)}
-                      rows={10}
-                      onChange={(e) => {
-                        JSON.parse(e.target.value);
-                      }}
-                    />
+          ) : boards && boards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {boards.map((board) => (
+                <Card key={board.id}>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">{board.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        ID: {board.id}
+                      </p>
+                      {board.location && (
+                        <p className="text-sm text-muted-foreground">
+                          Location: {board.location}
+                        </p>
+                      )}
+                    </div>
                   </CardContent>
-                  <CardFooter className="flex gap-2">
-                    <Button
-                      onClick={() =>
-                        handleUpdateConfig(config.id, config.config)
-                      }
-                    >
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDeleteConfig(config.id)}
-                    >
-                      Delete
-                    </Button>
-                  </CardFooter>
                 </Card>
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">No device configs found.</p>
+            <p className="text-muted-foreground">No boards found.</p>
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Config</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input
-                placeholder="Device ID (e.g., ESP001)"
-                value={newDeviceId}
-                onChange={(e) => setNewDeviceId(e.target.value)}
-                className="max-w-md"
-              />
-              <Textarea
-                className="font-mono"
-                placeholder="New Config JSON"
-                rows={10}
-                value={newConfig}
-                onChange={(e) => {
-                  setNewConfig(e.target.value);
-                  validateJson(e.target.value);
-                }}
-              />
-              {jsonError && <p className="text-red-500 text-sm">{jsonError}</p>}
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCreateConfig}
-                  disabled={
-                    !newDeviceId.trim() || !newConfig.trim() || !!jsonError
-                  }
-                >
-                  Create Config
-                </Button>
-                <Button variant="outline" onClick={formatJson}>
-                  Format JSON
-                </Button>
-              </div>
-              {status && (
-                <p
-                  className={`text-sm ${status.includes("✓") ? "text-green-600" : "text-red-600"}`}
-                >
-                  {status}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Boards</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {boardsLoading ? (
-                <p className="text-muted-foreground">Loading boards...</p>
-              ) : boardsError ? (
-                <p className="text-red-600">
-                  Error loading boards:{" "}
-                  {boardsErrorData instanceof Error
-                    ? boardsErrorData.message
-                    : "Unknown error"}
-                </p>
-              ) : boards && boards.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {boards.map((board) => (
-                    <Card key={board.id}>
-                      <CardContent className="pt-6">
-                        <div className="space-y-2">
-                          <h3 className="font-semibold">{board.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            ID: {board.id}
-                          </p>
-                          {board.location && (
-                            <p className="text-sm text-muted-foreground">
-                              Location: {board.location}
-                            </p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No boards found.</p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

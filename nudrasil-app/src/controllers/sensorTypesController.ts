@@ -13,18 +13,17 @@ interface DeleteSensorTypeRequest {
   id: number;
 }
 
-export async function fetchSensorTypes(secret: string): Promise<SensorType[]> {
+export async function fetchSensorTypes(secret?: string): Promise<SensorType[]> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    const headers: Record<string, string> = {};
+    if (secret?.trim()) {
+      headers.Authorization = secret;
     }
 
     const request = await axiosRequest<{ data: SensorType[] }>({
       method: "GET",
       url: "/api/admin/sensor-types",
-      headers: {
-        Authorization: secret,
-      },
+      headers,
     });
 
     if (request.success && request.value?.data) {

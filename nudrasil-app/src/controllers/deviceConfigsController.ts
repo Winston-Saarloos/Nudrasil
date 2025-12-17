@@ -20,20 +20,11 @@ interface DeleteDeviceConfigRequest {
   id: number;
 }
 
-export async function fetchDeviceConfigs(
-  secret: string,
-): Promise<DeviceConfig[]> {
+export async function fetchDeviceConfigs(): Promise<DeviceConfig[]> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
-    }
-
     const request = await axiosRequest<{ data: DeviceConfig[] }>({
       method: "GET",
       url: "/api/admin/device-configs",
-      headers: {
-        Authorization: secret,
-      },
     });
 
     if (request.success && request.value) {

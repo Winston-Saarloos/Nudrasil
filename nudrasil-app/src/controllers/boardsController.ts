@@ -20,18 +20,11 @@ interface BoardsResponse {
   data: Board[];
 }
 
-export async function fetchBoards(secret: string): Promise<Board[]> {
+export async function fetchBoards(): Promise<Board[]> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
-    }
-
     const request = await axiosRequest<BoardsResponse>({
       method: "GET",
       url: "/api/admin/boards",
-      headers: {
-        Authorization: secret,
-      },
     });
 
     if (request.success && request.value?.data) {

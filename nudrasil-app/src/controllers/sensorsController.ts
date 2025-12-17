@@ -33,18 +33,11 @@ interface DeleteSensorRequest {
   id: number;
 }
 
-export async function fetchSensors(secret: string): Promise<Sensor[]> {
+export async function fetchSensors(): Promise<Sensor[]> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
-    }
-
     const request = await axiosRequest<{ data: Sensor[] }>({
       method: "GET",
       url: "/api/admin/sensors",
-      headers: {
-        Authorization: secret,
-      },
     });
 
     if (request.success && request.value?.data) {

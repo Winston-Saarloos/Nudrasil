@@ -11,9 +11,8 @@ import {
 } from "@/utils/apiResponse";
 
 export async function GET(req: NextRequest) {
+  // Allow read-only access without authentication
   try {
-    await verifyAdminSecret(req);
-
     const results = await db
       .select({
         id: sensors.id,
@@ -28,7 +27,8 @@ export async function GET(req: NextRequest) {
 
     return createApiResponse({ data: results });
   } catch (err) {
-    return createUnauthorizedResponse();
+    console.error("Error fetching sensors:", err);
+    return createApiError("Failed to fetch sensors", 500);
   }
 }
 
