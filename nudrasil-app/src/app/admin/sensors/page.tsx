@@ -11,13 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { Input } from "@components/ui/input";
-import AdminSecretInput from "@components/AdminSecretInput";
+import AuthButton from "@components/AuthButton";
 import ReadOnlyAlert from "@components/ReadOnlyAlert";
-import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useSensors } from "@hooks/useSensors";
 import { useSensorTypes } from "@hooks/useSensorTypes";
 import { useBoards } from "@hooks/useBoards";
+import { usePlantAdmin } from "@hooks/usePlantAdmin";
 import {
   createSensor,
   updateSensor,
@@ -52,10 +51,7 @@ export default function SensorsAdminPage() {
   });
   const [editingSensorId, setEditingSensorId] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const { secret } = useAdminSecret();
-
-  const { data: secretData } = useAdminSecretValidation(secret);
-  const isReadOnly = !secretData?.isValid;
+  const { session, isReadOnly } = usePlantAdmin();
   const {
     data: sensors = [],
     isLoading: sensorsLoading,
@@ -67,8 +63,8 @@ export default function SensorsAdminPage() {
   const { data: boards = [] } = useBoards();
 
   const handleCreateOrUpdateSensor = async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
@@ -87,13 +83,13 @@ export default function SensorsAdminPage() {
       };
 
       if (editingSensorId) {
-        await updateSensor(secretData.secret, {
+        await updateSensor(session.accessToken, {
           id: editingSensorId,
           ...sensorData,
         });
         setStatus("✓ Sensor updated");
       } else {
-        await createSensor(secretData.secret, sensorData);
+        await createSensor(session.accessToken, sensorData);
         setStatus("✓ Sensor created");
       }
 
@@ -106,13 +102,13 @@ export default function SensorsAdminPage() {
   };
 
   const handleDeleteSensor = async (id: number) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     try {
-      await deleteSensor(secretData.secret, { id });
+      await deleteSensor(session.accessToken, { id });
       setStatus("✓ Sensor deleted");
       refetchSensors();
     } catch (error) {
@@ -141,7 +137,7 @@ export default function SensorsAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Sensors Admin</h1>
 
-      <AdminSecretInput />
+      <AuthButton />
 
       {isReadOnly && <ReadOnlyAlert />}
 

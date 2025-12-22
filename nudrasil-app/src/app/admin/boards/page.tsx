@@ -6,11 +6,10 @@ import { Board } from "@models/Board";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
-import AdminSecretInput from "@components/AdminSecretInput";
+import AuthButton from "@components/AuthButton";
 import ReadOnlyAlert from "@components/ReadOnlyAlert";
-import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useBoards } from "@hooks/useBoards";
+import { usePlantAdmin } from "@hooks/usePlantAdmin";
 import {
   createBoard,
   updateBoard,
@@ -22,26 +21,17 @@ export default function BoardsPage() {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
-  const { secret } = useAdminSecret();
-
-  const { data: secretData } = useAdminSecretValidation(secret);
-  const isReadOnly = !secretData?.isValid;
-  const {
-    data: boards = [],
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useBoards();
+  const { session, isReadOnly } = usePlantAdmin();
+  const { data: boards = [], isLoading, isError, error, refetch } = useBoards();
 
   const handleCreateBoard = async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     try {
-      await createBoard(secretData.secret, { name, location });
+      await createBoard(session.accessToken, { name, location });
       setStatus("✓ Board created");
       setName("");
       setLocation("");
@@ -52,8 +42,8 @@ export default function BoardsPage() {
   };
 
   const handleUpdateBoard = async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
@@ -63,7 +53,7 @@ export default function BoardsPage() {
     }
 
     try {
-      await updateBoard(secretData.secret, { id: editId, name, location });
+      await updateBoard(session.accessToken, { id: editId, name, location });
       setStatus("✓ Board updated");
       setName("");
       setLocation("");
@@ -75,13 +65,13 @@ export default function BoardsPage() {
   };
 
   const handleDeleteBoard = async (id: number) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     try {
-      await deleteBoard(secretData.secret, { id });
+      await deleteBoard(session.accessToken, { id });
       setStatus("✓ Board deleted");
       refetch();
     } catch (error) {
@@ -99,7 +89,7 @@ export default function BoardsPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Boards Admin</h1>
 
-      <AdminSecretInput />
+      <AuthButton />
 
       {isReadOnly && <ReadOnlyAlert />}
 

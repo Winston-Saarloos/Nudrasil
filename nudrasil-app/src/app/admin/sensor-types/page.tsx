@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
-import AdminSecretInput from "@components/AdminSecretInput";
+import AuthButton from "@components/AuthButton";
 import ReadOnlyAlert from "@components/ReadOnlyAlert";
-import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useSensorTypes } from "@hooks/useSensorTypes";
+import { usePlantAdmin } from "@hooks/usePlantAdmin";
 import {
   createSensorType,
   deleteSensorType,
@@ -17,10 +16,7 @@ import {
 export default function SensorTypesAdminPage() {
   const [newTypeName, setNewTypeName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
-  const { secret } = useAdminSecret();
-
-  const { data: secretData } = useAdminSecretValidation(secret);
-  const isReadOnly = !secretData?.isValid;
+  const { session, isReadOnly } = usePlantAdmin();
   const {
     data: sensorTypes = [],
     isLoading,
@@ -30,8 +26,8 @@ export default function SensorTypesAdminPage() {
   } = useSensorTypes();
 
   const handleCreateType = async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
@@ -41,7 +37,7 @@ export default function SensorTypesAdminPage() {
     }
 
     try {
-      await createSensorType(secretData.secret, { name: newTypeName });
+      await createSensorType(session.accessToken, { name: newTypeName });
       setStatus("✓ Sensor type created");
       setNewTypeName("");
       refetch();
@@ -51,13 +47,13 @@ export default function SensorTypesAdminPage() {
   };
 
   const handleDeleteType = async (id: number) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     try {
-      await deleteSensorType(secretData.secret, { id });
+      await deleteSensorType(session.accessToken, { id });
       setStatus("✓ Sensor type deleted");
       refetch();
     } catch (error) {
@@ -69,7 +65,7 @@ export default function SensorTypesAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Sensor Types Admin</h1>
 
-      <AdminSecretInput />
+      <AuthButton />
 
       {isReadOnly && <ReadOnlyAlert />}
 

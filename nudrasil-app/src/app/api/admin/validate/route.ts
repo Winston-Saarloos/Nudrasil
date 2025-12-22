@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { verifyAdminSecret } from "@/utils/verifyAdminSecret";
+import { requirePlantAdminRole } from "@/utils/requirePlantAdminRole";
 import {
   createApiResponse,
   createUnauthorizedResponse,
@@ -7,9 +7,9 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    await verifyAdminSecret(req);
+    await requirePlantAdminRole(req);
     return createApiResponse({ isValid: true });
   } catch {
-    return createUnauthorizedResponse("Invalid admin secret");
+    return createUnauthorizedResponse("Authentication required");
   }
 }

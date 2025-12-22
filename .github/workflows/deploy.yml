@@ -91,7 +91,11 @@ jobs:
             PG_USER=${{ secrets.PG_USER }}
             PG_PASSWORD=${{ secrets.PG_PASSWORD }}
             PG_DATABASE=${{ secrets.PG_DATABASE }}
-            ADMIN_PANEL_SECRET=${{ secrets.ADMIN_PANEL_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            KEYCLOAK_CLIENT_ID=${{ secrets.KEYCLOAK_CLIENT_ID }}
+            KEYCLOAK_CLIENT_SECRET=${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+            KEYCLOAK_ISSUER=${{ secrets.KEYCLOAK_ISSUER }}
 
       # Push with the host docker client so TLS trust applies
       - name: Push tags via host Docker

@@ -38,23 +38,25 @@ export async function fetchSensorTypes(secret?: string): Promise<SensorType[]> {
 }
 
 export async function createSensorType(
-  secret: string,
+  accessToken: string,
   typeData: CreateSensorTypeRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "POST",
-      url: "/api/admin/sensor-types",
-      data: typeData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "POST",
+        url: "/api/admin/sensor-types",
+        data: typeData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to create sensor type");
@@ -66,23 +68,25 @@ export async function createSensorType(
 }
 
 export async function deleteSensorType(
-  secret: string,
+  accessToken: string,
   typeData: DeleteSensorTypeRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "DELETE",
-      url: "/api/admin/sensor-types",
-      data: typeData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "DELETE",
+        url: "/api/admin/sensor-types",
+        data: typeData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to delete sensor type");

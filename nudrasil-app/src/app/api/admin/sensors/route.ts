@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { sensors } from "@root/drizzle/schema";
-import { verifyAdminSecret } from "@/utils/verifyAdminSecret";
+import { requirePlantAdminRole } from "@/utils/requirePlantAdminRole";
 import {
   createApiResponse,
   createApiError,
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await verifyAdminSecret(req);
+    await requirePlantAdminRole(req);
 
     const {
       name,
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    await verifyAdminSecret(req);
+    await requirePlantAdminRole(req);
 
     const { id } = await req.json();
 
@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    await verifyAdminSecret(req);
+    await requirePlantAdminRole(req);
 
     const body = await req.json();
     const {

@@ -39,23 +39,25 @@ export async function fetchBoards(): Promise<Board[]> {
 }
 
 export async function createBoard(
-  secret: string,
+  accessToken: string,
   boardData: CreateBoardRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "POST",
-      url: "/api/admin/boards",
-      data: boardData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "POST",
+        url: "/api/admin/boards",
+        data: boardData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to create board");
@@ -67,23 +69,25 @@ export async function createBoard(
 }
 
 export async function updateBoard(
-  secret: string,
+  accessToken: string,
   boardData: UpdateBoardRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "PATCH",
-      url: "/api/admin/boards",
-      data: boardData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "PATCH",
+        url: "/api/admin/boards",
+        data: boardData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to update board");
@@ -95,23 +99,25 @@ export async function updateBoard(
 }
 
 export async function deleteBoard(
-  secret: string,
+  accessToken: string,
   boardData: DeleteBoardRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "DELETE",
-      url: "/api/admin/boards",
-      data: boardData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "DELETE",
+        url: "/api/admin/boards",
+        data: boardData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to delete board");

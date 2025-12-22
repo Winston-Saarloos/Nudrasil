@@ -11,12 +11,11 @@ import {
   CardContent,
   CardFooter,
 } from "@components/ui/card";
-import AdminSecretInput from "@components/AdminSecretInput";
+import AuthButton from "@components/AuthButton";
 import ReadOnlyAlert from "@components/ReadOnlyAlert";
-import useAdminSecretValidation from "@hooks/useAdminSecretValidation";
-import { useAdminSecret } from "@hooks/useAdminSecret";
 import { useDeviceConfigs } from "@hooks/useDeviceConfigs";
 import { useBoards } from "@hooks/useBoards";
+import { usePlantAdmin } from "@hooks/usePlantAdmin";
 import {
   createDeviceConfig,
   updateDeviceConfig,
@@ -28,10 +27,7 @@ export default function DeviceConfigsAdminPage() {
   const [newConfig, setNewConfig] = useState("{}");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const { secret } = useAdminSecret();
-
-  const { data: secretData } = useAdminSecretValidation(secret);
-  const isReadOnly = !secretData?.isValid;
+  const { session, isReadOnly } = usePlantAdmin();
   const {
     data: configs = [],
     isLoading: configsLoading,
@@ -70,8 +66,8 @@ export default function DeviceConfigsAdminPage() {
   };
 
   const handleCreateConfig = async () => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
@@ -82,7 +78,7 @@ export default function DeviceConfigsAdminPage() {
 
     try {
       const parsed = JSON.parse(newConfig);
-      await createDeviceConfig(secretData.secret, {
+      await createDeviceConfig(session.accessToken, {
         deviceId: newDeviceId,
         config: parsed,
       });
@@ -99,13 +95,13 @@ export default function DeviceConfigsAdminPage() {
     id: number,
     updatedConfig: Record<string, unknown>,
   ) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     try {
-      await updateDeviceConfig(secretData.secret, {
+      await updateDeviceConfig(session.accessToken, {
         id,
         config: updatedConfig,
       });
@@ -117,15 +113,15 @@ export default function DeviceConfigsAdminPage() {
   };
 
   const handleDeleteConfig = async (id: number) => {
-    if (!secretData?.secret || !secretData?.isValid) {
-      setStatus("Invalid admin secret");
+    if (isReadOnly || !session?.accessToken) {
+      setStatus("Please sign in to make changes");
       return;
     }
 
     if (!confirm("Are you sure you want to delete this config?")) return;
 
     try {
-      await deleteDeviceConfig(secretData.secret, { id });
+      await deleteDeviceConfig(session.accessToken, { id });
       setStatus("✓ Config deleted");
       refetchConfigs();
     } catch (error) {
@@ -137,7 +133,7 @@ export default function DeviceConfigsAdminPage() {
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold">Device Configs Admin</h1>
 
-      <AdminSecretInput />
+      <AuthButton />
 
       {isReadOnly && <ReadOnlyAlert />}
 

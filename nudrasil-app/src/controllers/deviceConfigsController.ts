@@ -39,23 +39,25 @@ export async function fetchDeviceConfigs(): Promise<DeviceConfig[]> {
 }
 
 export async function createDeviceConfig(
-  secret: string,
+  accessToken: string,
   configData: CreateDeviceConfigRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "POST",
-      url: "/api/admin/device-configs",
-      data: configData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "POST",
+        url: "/api/admin/device-configs",
+        data: configData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to create device config");
@@ -67,23 +69,25 @@ export async function createDeviceConfig(
 }
 
 export async function updateDeviceConfig(
-  secret: string,
+  accessToken: string,
   configData: UpdateDeviceConfigRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "PATCH",
-      url: "/api/admin/device-configs",
-      data: configData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "PATCH",
+        url: "/api/admin/device-configs",
+        data: configData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to update device config");
@@ -95,23 +99,25 @@ export async function updateDeviceConfig(
 }
 
 export async function deleteDeviceConfig(
-  secret: string,
+  accessToken: string,
   configData: DeleteDeviceConfigRequest,
 ): Promise<void> {
   try {
-    if (!secret.trim()) {
-      throw new Error("Admin secret is required");
+    if (!accessToken) {
+      throw new Error("Authentication required");
     }
 
-    const request = await axiosRequest({
-      method: "DELETE",
-      url: "/api/admin/device-configs",
-      data: configData,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: secret,
+    const request = await axiosRequest(
+      {
+        method: "DELETE",
+        url: "/api/admin/device-configs",
+        data: configData,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+      accessToken,
+    );
 
     if (!request.success) {
       throw new Error(request.message || "Failed to delete device config");

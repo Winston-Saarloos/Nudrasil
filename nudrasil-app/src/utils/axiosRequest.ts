@@ -11,6 +11,7 @@ const httpClient: AxiosInstance = axios.create({
   timeout: 15000,
   // only network/timeout/cancel will throw.
   validateStatus: () => true,
+  withCredentials: true, // Send cookies with requests
 });
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29,8 +30,17 @@ function isGenericResponse(obj: any): obj is GenericResponse<any> {
 
 export async function axiosRequest<T = unknown>(
   requestConfig: AxiosRequestConfig,
+  accessToken?: string,
 ): Promise<GenericResponse<T>> {
   try {
+    // Add Authorization header if token is provided
+    if (accessToken) {
+      requestConfig.headers = {
+        ...requestConfig.headers,
+        Authorization: `Bearer ${accessToken}`,
+      };
+    }
+
     const axiosResponse: AxiosResponse =
       await httpClient.request(requestConfig);
     const { status, statusText, data } = axiosResponse;
