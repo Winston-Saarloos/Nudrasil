@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { DateTime } from "luxon";
 import { Droplets, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 
@@ -30,8 +29,6 @@ export function IndividualPlantChart({
   selectedTimePeriod = "1day",
   showGrid = true,
 }: IndividualPlantChartProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [isIconHovered, setIsIconHovered] = useState(false);
   const sensorData = useSensorData(sensorConfig.id);
   const sensorCalibrationData = useSensorCalibrationData(sensorConfig.id);
 
@@ -108,26 +105,7 @@ export function IndividualPlantChart({
     }
   };
 
-  const getTooltipContent = (
-    zone: typeof currentZone,
-    zones: typeof plantZones,
-  ): string | null => {
-    if (!zone || !zones) return null;
-
-    switch (zone) {
-      case "green":
-        return zones.green.description;
-      case "yellow":
-        return zones.yellow.description;
-      case "red":
-        return zones.red.description;
-      default:
-        return null;
-    }
-  };
-
   const zoneIcon = getZoneIcon(currentZone);
-  const tooltipContent = getTooltipContent(currentZone, plantZones);
 
   return (
     <SensorChart
@@ -144,53 +122,15 @@ export function IndividualPlantChart({
               </div>
             )}
             {plantZones && lastMoistureValue !== undefined && currentZone && (
-              <div className="relative mt-1">
-                <button
-                  type="button"
-                  className="relative"
-                  onMouseEnter={() => {
-                    setShowTooltip(true);
-                    setIsIconHovered(true);
-                  }}
-                  onMouseLeave={() => {
-                    setShowTooltip(false);
-                    setIsIconHovered(false);
-                  }}
-                  onFocus={() => {
-                    setShowTooltip(true);
-                    setIsIconHovered(true);
-                  }}
-                  onBlur={() => {
-                    setShowTooltip(false);
-                    setIsIconHovered(false);
-                  }}
-                  aria-label={`Current moisture: ${lastMoistureValue.toFixed(1)}%`}
-                >
-                  {(() => {
-                    const IconComponent = zoneIcon.Icon;
-                    return (
-                      <IconComponent
-                        className={`h-4 w-4 transition-colors ${zoneIcon.color}`}
-                      />
-                    );
-                  })()}
-                </button>
-                {showTooltip && tooltipContent && (
-                  <div
-                    className="absolute right-0 top-6 z-50 w-96 max-w-[calc(100vw-2rem)] px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg shadow-lg text-xs text-white"
-                    role="tooltip"
-                    onMouseEnter={() => {
-                      setShowTooltip(true);
-                      setIsIconHovered(true);
-                    }}
-                    onMouseLeave={() => {
-                      setShowTooltip(false);
-                      setIsIconHovered(false);
-                    }}
-                  >
-                    <span className={zoneIcon.color}>{tooltipContent}</span>
-                  </div>
-                )}
+              <div className="mt-1">
+                {(() => {
+                  const IconComponent = zoneIcon.Icon;
+                  return (
+                    <IconComponent
+                      className={`h-4 w-4 transition-colors ${zoneIcon.color}`}
+                    />
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -216,7 +156,6 @@ export function IndividualPlantChart({
       className={className}
       showGrid={showGrid}
       zones={plantZones || undefined}
-      externalHoverState={isIconHovered}
     />
   );
 }

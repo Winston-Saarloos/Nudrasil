@@ -7,7 +7,6 @@ export interface PlantZone {
   range?: [number, number];
   range_low?: [number, number];
   range_high?: [number, number];
-  description: string;
 }
 
 export interface PlantZones {
@@ -31,21 +30,15 @@ export const PLANT_ZONES: PlantZonesConfig = {
       name: "Spider Plant",
       zones: {
         green: {
-          range: [35, 55],
-          description:
-            "Ideal moisture range. Soil is lightly moist and supports healthy growth.",
+          range: [26, 59],
         },
         yellow: {
-          range_low: [25, 34],
-          range_high: [56, 65],
-          description:
-            "Caution. Slightly dry or slightly wet. Acceptable short term but may stress the plant.",
+          range_low: [16, 25],
+          range_high: [60, 69],
         },
         red: {
-          range_low: [0, 24],
-          range_high: [66, 100],
-          description:
-            "Warning. Too dry or too wet. Risk of leaf tip browning or root rot.",
+          range_low: [0, 15],
+          range_high: [70, 100],
         },
       },
     },
@@ -53,21 +46,15 @@ export const PLANT_ZONES: PlantZonesConfig = {
       name: "Devil's Ivy",
       zones: {
         green: {
-          range: [30, 50],
-          description:
-            "Ideal moisture range. Slightly damp but allows air circulation around roots.",
+          range: [26, 54],
         },
         yellow: {
-          range_low: [20, 29],
-          range_high: [51, 65],
-          description:
-            "Caution. Borderline dry or wet. Leaves may start to droop or yellow.",
+          range_low: [20, 25],
+          range_high: [55, 65],
         },
         red: {
           range_low: [0, 19],
           range_high: [66, 100],
-          description:
-            "Warning. Prolonged dryness or saturation can cause leaf loss or root rot.",
         },
       },
     },
