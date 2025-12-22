@@ -1,4 +1,4 @@
-name: Deploy Next.js App to Harbor
+name: Deploy Next.js App
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - ".github/workflows/deploy.yml"
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: self-hosted
 
     steps:
@@ -49,41 +49,14 @@ jobs:
           install: false
           use: true
 
-      - name: Debug image name
-        run: |
-          echo "Registry: ${{ secrets.HARBOR_REGISTRY }}"
-          echo "Image name: ${{ secrets.HARBOR_IMAGE_NAME }}"
-          echo "Full path: ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}"
-
-      # Host docker login (inherits system's trusted mkcert CA)
-      - name: Login to Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.HARBOR_REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-
-      # Build and LOAD into host Docker (no push)
-      - name: Build image (load into Docker)
+      # Build and load image directly into Docker
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: nudrasil-app
           file: nudrasil-app/docker/production/Dockerfile
           load: true
-          tags: ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: nudrasil-app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -97,34 +70,19 @@ jobs:
             KEYCLOAK_CLIENT_SECRET=${{ secrets.KEYCLOAK_CLIENT_SECRET }}
             KEYCLOAK_ISSUER=${{ secrets.KEYCLOAK_ISSUER }}
 
-      # Push with the host docker client so TLS trust applies
-      - name: Push tags via host Docker
-        run: |
-          BASE="${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main"
-          echo "${{ steps.meta.outputs.tags }}" | while IFS= read -r TAG; do
-            [ -z "$TAG" ] && continue
-            # If TAG differs from BASE, retag; then push
-            if [ "$TAG" != "$BASE" ]; then
-              docker tag "$BASE" "$TAG"
-            fi
-            docker push "$TAG"
-          done
-
       - name: Deploy to local machine
         run: |
           # Stop existing container if running
           docker stop nudrasil-app-docker 2>/dev/null || true
           docker rm nudrasil-app-docker 2>/dev/null || true
 
-          # Pull the latest image
-          docker pull ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
-
+          # Run the image
           docker run -d \
             --name nudrasil-app-docker \
             --restart unless-stopped \
             --network host \
             -e NODE_ENV=production \
-            ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_IMAGE_NAME }}:main
+            nudrasil-app:latest
 
           # Wait for container to start
           sleep 10
