@@ -8,23 +8,93 @@ import {
   createApiResponse,
   createUnauthorizedResponse,
 } from "@/utils/apiResponse";
+import { getToken } from "next-auth/jwt";
+
+// Simple IP address pattern - matches IPv4 addresses (e.g., 192.168.1.1)
+const IP_REGEX = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
+
+/**
+ * Recursively masks IP addresses in a JSON object
+ */
+function maskIpsInObject(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === "string") {
+    // Mask IP addresses in strings: 192.168.1.1 -> ***.***.*.*
+    return obj.replace(IP_REGEX, (match) =>
+      match
+        .split(".")
+        .map((octet) => "*".repeat(octet.length))
+        .join("."),
+    );
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => maskIpsInObject(item));
+  }
+
+  if (typeof obj === "object") {
+    const masked: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      masked[key] = maskIpsInObject(value);
+    }
+    return masked;
+  }
+
+  return obj;
+}
+
+/**
+ * Checks if the user has a valid token with plant-admin role
+ */
+async function hasPlantAdminRole(req: NextRequest): Promise<boolean> {
+  try {
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    if (!token) {
+      return false;
+    }
+
+    const hasPlantAdminRole =
+      Array.isArray(token.roles) && token.roles.includes("plant-admin");
+
+    return hasPlantAdminRole;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
-  // Allow read-only access without authentication
+  // Allow read-only access without authentication, but mask IPs if not authenticated
   try {
     const url = new URL(req.url);
     const deviceId = url.searchParams.get("deviceId");
+    const isAuthenticated = await hasPlantAdminRole(req);
 
+    let configs;
     if (deviceId) {
-      const configs = await db
+      configs = await db
         .select()
         .from(device_configs)
         .where(eq(device_configs.device_id, deviceId));
-      return createApiResponse({ data: configs });
     } else {
-      const configs = await db.select().from(device_configs);
-      return createApiResponse({ data: configs });
+      configs = await db.select().from(device_configs);
     }
+
+    // Mask IP addresses if user is not authenticated
+    if (!isAuthenticated) {
+      configs = configs.map((config) => ({
+        ...config,
+        config: maskIpsInObject(config.config) as Record<string, unknown>,
+      }));
+    }
+
+    return createApiResponse({ data: configs });
   } catch (error) {
     console.error("Error fetching device configs:", error);
     return createApiResponse(
