@@ -107,6 +107,7 @@ void onWiFiConnected(const WiFiEventStationModeConnected& evt) {
 void onWiFiGotIP(const WiFiEventStationModeGotIP& evt) {
   debug("WiFi IP: " + evt.ip.toString());
   debug("Gateway: " + evt.gw.toString());
+  debug("Subnet: " + evt.mask.toString());
   debug("RSSI: " + String(WiFi.RSSI()) + " dBm");
 
   // Config fetch should happen in main loop
@@ -115,6 +116,8 @@ void onWiFiGotIP(const WiFiEventStationModeGotIP& evt) {
     configNeedsFetch = true;
     // Clear failure tracking on WiFi reconnect to give config fetch a fresh chance
     firstConfigFetchFailureMs = 0;
+  } else {
+    debug("Server config already initialized: " + serverIp + ":" + String(serverPort));
   }
 }
 
@@ -157,7 +160,12 @@ bool checkConnectivityNonBlocking() {
 
     lastManualReconnectAttemptMs = now;
     debug("WiFi not connected, attempting manual reconnection (backed off)...");
+    debug("Current WiFi status: " + String(WiFi.status()));
 
+    // Disconnect and clear before reconnecting
+    WiFi.disconnect();
+    delay(100);
+    
     // Let auto-reconnect handle most cases; just (re)issue WiFi.begin here.
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -166,32 +174,30 @@ bool checkConnectivityNonBlocking() {
   }
 
   // WiFi is connected. Optionally run a probe, but do not block sending.
-  if (serverIp != "") {
-    // Avoid probing immediately after reconnect
-    unsigned long sinceReconnect = millis() - lastReconnectTimeMs;
-    if (sinceReconnect > 5000 && (millis() - lastProbeAttemptMs) > probeIntervalMs) {
-      lastProbeAttemptMs = millis();
+  // Avoid probing immediately after reconnect
+  unsigned long sinceReconnect = millis() - lastReconnectTimeMs;
+  if (sinceReconnect > 5000 && (millis() - lastProbeAttemptMs) > probeIntervalMs) {
+    lastProbeAttemptMs = millis();
 
-      // Probe the configured server rather than a separate domain.
-      String probeUrl = "http://" + serverIp + ":" + String(serverPort) + "/api/probe";
-      HTTPClient http;
-      WiFiClient client;
-      http.setTimeout(3000);
-      http.setReuse(false);
+    // Probe the server using the same domain as config fetch
+    String probeUrl = String(SERVER_URL) + "api/probe";
+    HTTPClient http;
+    WiFiClient client;
+    http.setTimeout(3000);
+    http.setReuse(false);
 
-      if (http.begin(client, probeUrl)) {
-        int code = http.GET();
-        http.end();
+    if (http.begin(client, probeUrl)) {
+      int code = http.GET();
+      http.end();
 
-        if (code != 200) {
-          if (millis() - lastProbeFailLogMs > 30000) {
-            debug("Probe failed (HTTP " + String(code) + ") but WiFi is connected; continuing.");
-            lastProbeFailLogMs = millis();
-          }
+      if (code != 200) {
+        if (millis() - lastProbeFailLogMs > 30000) {
+          debug("Probe failed (HTTP " + String(code) + ") but WiFi is connected; continuing.");
+          lastProbeFailLogMs = millis();
         }
-      } else {
-        http.end();
       }
+    } else {
+      http.end();
     }
   }
 
@@ -226,6 +232,7 @@ void fetchServerConfig() {
   }
 
   http.addHeader("Authorization", DEVICE_SECRET);
+  debug("Sending Authorization header: " + String(DEVICE_SECRET));
 
   int code = http.GET();
   String body = http.getString();
@@ -297,12 +304,8 @@ void fetchServerConfig() {
 // Returns true if ALL sensor posts succeeded in this cycle, false otherwise.
 // Includes max retries per sensor so the device cannot hang forever.
 bool postSensorData(float tempC, float humidity, int* moistureValues, int light) {
-  if (serverIp == "") {
-    debug("Cannot post: serverIp is empty");
-    return false;
-  }
-
-  String url = "http://" + serverIp + ":" + String(serverPort) + "/api/sensor";
+  // Use the same domain as config fetch instead of IP from config
+  String url = String(SERVER_URL) + "api/sensor";
   debug("POST target URL: " + url);
 
   struct Sensor {
@@ -378,6 +381,8 @@ bool postSensorData(float tempC, float humidity, int* moistureValues, int light)
 
       http.addHeader("Content-Type", "application/json");
       http.addHeader("Connection", "close");
+      http.addHeader("Authorization", DEVICE_SECRET);
+      debug("Sending Authorization header: " + String(DEVICE_SECRET) + " (POST to sensor endpoint)");
 
       int status = http.POST(reinterpret_cast<const uint8_t*>(payload), n);
 
@@ -421,12 +426,6 @@ void runSensorCycle() {
 
   if (WiFi.status() != WL_CONNECTED) {
     debug("WiFi not connected, skipping sensor cycle");
-    return;
-  }
-
-  if (serverIp == "") {
-    debug("Server config not initialized, skipping sensor cycle");
-    configNeedsFetch = true;
     return;
   }
 
@@ -556,26 +555,95 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(true);
+  // Clear any stored WiFi credentials that might be corrupted
+  debug("Clearing stored WiFi credentials...");
+  WiFi.persistent(false);
+  WiFi.disconnect(true);
+  delay(500); // Give time for disconnect to complete
+  
+  // Configure WiFi settings
   WiFi.mode(WIFI_STA);
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
   WiFi.setOutputPower(20.5);
   WiFi.hostname("nodemcu-sensor");
-  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+  // Don't force 11N mode - let it auto-negotiate for better compatibility
+  // WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+  
+  // Enable auto-reconnect for background reconnection attempts
+  WiFi.setAutoReconnect(true);
+  
+  // Now enable persistent storage after clearing
+  WiFi.persistent(true);
 
   static WiFiEventHandler onConnectedHandler = WiFi.onStationModeConnected(onWiFiConnected);
   static WiFiEventHandler onGotIPHandler = WiFi.onStationModeGotIP(onWiFiGotIP);
   static WiFiEventHandler onDisconnectedHandler = WiFi.onStationModeDisconnected(onWiFiDisconnected);
 
+  // Scan for available networks to help diagnose
+  debug("Scanning for WiFi networks...");
+  int n = WiFi.scanNetworks();
+  debug("Found " + String(n) + " networks");
+  bool foundSSID = false;
+  for (int i = 0; i < n; i++) {
+    String ssid = WiFi.SSID(i);
+    int rssi = WiFi.RSSI(i);
+    if (ssid == WIFI_SSID) {
+      foundSSID = true;
+      debug("  * " + ssid + " (RSSI: " + String(rssi) + " dBm) [TARGET]");
+    } else if (i < 5) { // Show first 5 networks for reference
+      debug("  - " + ssid + " (RSSI: " + String(rssi) + " dBm)");
+    }
+  }
+  if (!foundSSID) {
+    debug("WARNING: Target SSID '" + String(WIFI_SSID) + "' not found in scan!");
+  }
+
+  debug("Connecting to WiFi: " + String(WIFI_SSID));
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  debug("Connecting to WiFi...");
   bool ledState = false;
   unsigned long wifiStartTime = millis();
-  const unsigned long wifiTimeout = 30000;
+  const unsigned long wifiTimeout = 60000; // Increased to 60 seconds for slow DHCP
+  unsigned long apConnectedTime = 0; // Track when we connect to AP
 
+  int lastStatus = -1;
   while (WiFi.status() != WL_CONNECTED && (millis() - wifiStartTime < wifiTimeout)) {
+    wl_status_t status = WiFi.status();
+    
+    // Log status changes for debugging
+    if (status != lastStatus) {
+      lastStatus = status;
+      String statusStr = "Unknown";
+      switch (status) {
+        case WL_IDLE_STATUS: statusStr = "Idle"; break;
+        case WL_NO_SSID_AVAIL: statusStr = "No SSID Available"; break;
+        case WL_SCAN_COMPLETED: statusStr = "Scan Completed"; break;
+        case WL_CONNECTED: statusStr = "Connected"; break;
+        case WL_CONNECT_FAILED: statusStr = "Connect Failed"; break;
+        case WL_CONNECTION_LOST: statusStr = "Connection Lost"; break;
+        case WL_DISCONNECTED: statusStr = "Disconnected"; break;
+        case WL_NO_SHIELD: statusStr = "No Shield"; break;
+        case WL_WRONG_PASSWORD: statusStr = "Wrong Password"; break;
+        default: statusStr = "Unknown (" + String(status) + ")"; break;
+      }
+      debug("WiFi status: " + statusStr + " (" + String(status) + ")");
+      
+      // Check if we're connected to AP but waiting for IP
+      IPAddress currentIP = WiFi.localIP();
+      if (status == WL_CONNECTED || (currentIP != IPAddress(0, 0, 0, 0) && currentIP != IPAddress(255, 255, 255, 255))) {
+        if (apConnectedTime == 0) {
+          apConnectedTime = millis();
+          debug("Connected to AP, waiting for DHCP IP assignment...");
+        } else {
+          unsigned long waitingTime = millis() - apConnectedTime;
+          if (waitingTime > 10000 && waitingTime % 5000 < 500) {
+            debug("Still waiting for IP... (" + String(waitingTime / 1000) + "s)");
+            debug("Current IP: " + currentIP.toString());
+          }
+        }
+      }
+    }
+    
     delay(500);
     debugInline(".");
     digitalWrite(LED_PIN, ledState ? HIGH : LOW);
@@ -589,10 +657,25 @@ void setup() {
     debug("");
     debug("WiFi connected successfully");
     debug("ESP IP address: " + WiFi.localIP().toString());
+    debug("Gateway: " + WiFi.gatewayIP().toString());
+    debug("Subnet: " + WiFi.subnetMask().toString());
     debug("RSSI: " + String(WiFi.RSSI()) + " dBm");
   } else {
     debug("");
+    wl_status_t finalStatus = WiFi.status();
+    IPAddress currentIP = WiFi.localIP();
     debug("WiFi connection failed after " + String((millis() - wifiStartTime) / 1000) + " seconds");
+    debug("Final status: " + String(finalStatus));
+    debug("Current IP: " + currentIP.toString());
+    debug("SSID: " + String(WIFI_SSID));
+    
+    // Additional diagnostics
+    if (apConnectedTime > 0) {
+      unsigned long dhcpWaitTime = millis() - apConnectedTime;
+      debug("Connected to AP but DHCP failed after " + String(dhcpWaitTime / 1000) + " seconds");
+      debug("Possible causes: Router DHCP disabled, MAC filtering, or network issue");
+    }
+    
     debug("Will retry in connectivity check");
   }
 
@@ -681,8 +764,18 @@ void loop() {
   // Always try to keep WiFi connected (non-blocking)
   bool wifiOk = checkConnectivityNonBlocking();
 
+  // Check if WiFi just got an IP address (fallback if onWiFiGotIP didn't fire)
+  if (WiFi.status() == WL_CONNECTED && WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
+    // WiFi is connected and has an IP, ensure config fetch is triggered
+    if (serverIp == "" && !configNeedsFetch) {
+      debug("WiFi has IP but config not fetched, triggering config fetch");
+      configNeedsFetch = true;
+      firstConfigFetchFailureMs = 0; // Clear failure tracking
+    }
+  }
+
   // Fetch config if needed (rate-limited)
-  if (configNeedsFetch && WiFi.status() == WL_CONNECTED) {
+  if (configNeedsFetch && WiFi.status() == WL_CONNECTED && WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
     unsigned long now = millis();
     if (now - lastConfigFetchAttempt >= configFetchRetryInterval) {
       lastConfigFetchAttempt = now;
