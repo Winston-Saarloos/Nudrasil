@@ -47,9 +47,29 @@ function maskIpsInObject(obj: unknown): unknown {
 }
 
 /**
- * Checks if the user has a valid token with plant-admin role
+ * Checks if the request has a valid device secret in the Authorization header
+ */
+function hasValidDeviceSecret(req: NextRequest): boolean {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) {
+    return false;
+  }
+
+  // Check if the Authorization header matches the device secret
+  // The firmware sends: Authorization: {secret}
+  const deviceSecret = process.env.DEVICE_SECRET;
+  return authHeader === deviceSecret;
+}
+
+/**
+ * Checks if the user has a valid token with plant-admin role OR a valid device secret
  */
 async function hasPlantAdminRole(req: NextRequest): Promise<boolean> {
+  if (hasValidDeviceSecret(req)) {
+    return true;
+  }
+
+  // Then check for NextAuth token
   try {
     const token = await getToken({
       req,
