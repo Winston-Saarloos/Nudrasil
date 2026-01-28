@@ -57,7 +57,7 @@ function hasValidDeviceSecret(req: NextRequest): boolean {
 
   // Check if the Authorization header matches the device secret
   // The firmware sends: Authorization: {secret}
-  const deviceSecret = process.env.DEVICE_SECRET;
+  const deviceSecret = process.env.ADMIN_SECRET;
   return authHeader === deviceSecret;
 }
 
