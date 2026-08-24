@@ -27,6 +27,12 @@ export default function DeviceConfigsAdminPage() {
   const [newConfig, setNewConfig] = useState("{}");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [editedConfigs, setEditedConfigs] = useState<Record<number, string>>(
+    {},
+  );
+  const [editedConfigErrors, setEditedConfigErrors] = useState<
+    Record<number, string | null>
+  >({});
   const { session, isReadOnly } = usePlantAdmin();
   const {
     data: configs = [],
@@ -93,11 +99,27 @@ export default function DeviceConfigsAdminPage() {
 
   const handleUpdateConfig = async (
     id: number,
-    updatedConfig: Record<string, unknown>,
+    fallbackConfig: Record<string, unknown>,
   ) => {
     if (isReadOnly || !session?.accessToken) {
       setStatus("Please sign in to make changes");
       return;
+    }
+
+    const editedText = editedConfigs[id];
+    let updatedConfig = fallbackConfig;
+    if (editedText !== undefined) {
+      try {
+        updatedConfig = JSON.parse(editedText);
+      } catch (error) {
+        setEditedConfigErrors((prev) => ({
+          ...prev,
+          [id]: "Invalid JSON format",
+        }));
+        setStatus("Please fix JSON before submitting");
+        console.error(error);
+        return;
+      }
     }
 
     try {
@@ -106,6 +128,12 @@ export default function DeviceConfigsAdminPage() {
         config: updatedConfig,
       });
       setStatus("✓ Config updated");
+      setEditedConfigs((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setEditedConfigErrors((prev) => ({ ...prev, [id]: null }));
       refetchConfigs();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unknown error");
@@ -155,19 +183,44 @@ export default function DeviceConfigsAdminPage() {
               </CardHeader>
               <CardContent>
                 <Textarea
-                  value={JSON.stringify(config.config, null, 2)}
+                  value={
+                    editedConfigs[config.id] ??
+                    JSON.stringify(config.config, null, 2)
+                  }
                   rows={10}
+                  className="font-mono"
                   onChange={(e) => {
-                    JSON.parse(e.target.value);
+                    const text = e.target.value;
+                    setEditedConfigs((prev) => ({
+                      ...prev,
+                      [config.id]: text,
+                    }));
+                    try {
+                      JSON.parse(text);
+                      setEditedConfigErrors((prev) => ({
+                        ...prev,
+                        [config.id]: null,
+                      }));
+                    } catch {
+                      setEditedConfigErrors((prev) => ({
+                        ...prev,
+                        [config.id]: "Invalid JSON format",
+                      }));
+                    }
                   }}
                   disabled={isReadOnly}
                   readOnly={isReadOnly}
                 />
+                {editedConfigErrors[config.id] && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {editedConfigErrors[config.id]}
+                  </p>
+                )}
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Button
                   onClick={() => handleUpdateConfig(config.id, config.config)}
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || !!editedConfigErrors[config.id]}
                 >
                   Save Changes
                 </Button>
